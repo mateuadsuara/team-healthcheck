@@ -1,0 +1,3 @@
+#!/bin/bash
+
+./compile_frontend && ./start_backend

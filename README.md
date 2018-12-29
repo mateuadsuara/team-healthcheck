@@ -4,12 +4,11 @@ data visualisation tool for assessing team health
 
 # get started
 
-* install elm and its dependencies
-* install ruby and its dependencies
-* compile frontend
-* start backend
+* install frontend dependencies
+* install backend dependencies
+* `./run`
 
-### install elm and its dependencies
+### install frontend dependencies
 
 first, install elm and elm-test
 
@@ -26,7 +25,7 @@ then, install inline-source-cli
 
 `npm -g install inline-source-cli`
 
-### install ruby and its dependencies
+### install backend dependencies
 
 first, install ruby:
 more info: https://www.ruby-lang.org/en/documentation/installation/
