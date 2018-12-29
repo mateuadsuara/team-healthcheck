@@ -6,13 +6,21 @@ data visualisation tool for assessing team health
 
 * install elm and its dependencies
 * install ruby and its dependencies
+* compile frontend
+* start backend
 
 ### install elm and its dependencies
+
+first, install elm and elm-test
 
 `npm -g install elm`
 `npm -g install elm-test`
 
 more info: https://guide.elm-lang.org/install.html
+
+then, install uglifyjs
+
+`npm -g install uglify-js`
 
 ### install ruby and its dependencies
 
@@ -24,18 +32,18 @@ more info: https://bundler.io/#getting-started
 
 then, `bundle install`
 
-### run frontend tests
+### test frontend
 
-`elm-test tests/`
+`./test_frontend`
 
-### run backend tests
+### test backend
 
-`rspec spec/`
+`./test_backend`
 
 ### compile frontend
 
-`elm make src/Main.elm`
+`./compile_frontend`
 
 ### start backend
 
-`rackup --host 0.0.0.0 --port 9292`
+`./start_backend`
