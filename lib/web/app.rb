@@ -6,8 +6,6 @@ module Web
       case path
       when "/"
         html_response('index.html')
-      when "/elm.min.js"
-        js_response('elm.min.js')
       else
         not_found_response
       end
@@ -15,10 +13,6 @@ module Web
 
     def html_response(file)
       ['200', {'Content-Type' => 'text/html'}, [File.read(file)]]
-    end
-
-    def js_response(file)
-      ['200', {'Content-Type' => 'application/javascript'}, [File.read(file)]]
     end
 
     def not_found_response

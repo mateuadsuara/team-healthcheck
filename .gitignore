@@ -5,3 +5,4 @@ repl-temp-*
 # compile_frontend generated files
 elm.js
 elm.min.js
+/index.html

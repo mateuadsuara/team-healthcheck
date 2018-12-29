@@ -22,6 +22,10 @@ then, install uglifyjs
 
 `npm -g install uglify-js`
 
+then, install inline-source-cli
+
+`npm -g install inline-source-cli`
+
 ### install ruby and its dependencies
 
 first, install ruby:
