@@ -5,7 +5,7 @@ module Web
 
       case path
       when "/"
-        html_response('index.html')
+        html_response('build/index.html')
       else
         not_found_response
       end
