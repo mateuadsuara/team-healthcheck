@@ -1,4 +1,4 @@
-add metrics
+create metrics
 * for each:
   * name
   * criteria
@@ -7,33 +7,35 @@ register point-of-view
 * person giving the point-of-view
 * date
 * health point-of-view(:shrug: | good/green..mediocre/yellow..bad/red encoded as 1..0..-1)
-  - what do you think makes it the way it is (root cause)? :shrug: | reason
+  - why? :shrug: | reason
 * slope point-of-view(:shrug: | bettering/climbing..unchanging/flat..worsening/falling encoded as 1..0..-1)
-  - if bettering, what do you think made it better? :shrug: | reason
-  - if unchanging, why do you think is it not changing? :shrug: | reason
-  - if worsening, what do you think made it worse? :shrug: | reason
+  - why? :shrug: | reason
 
-- want to give two answers?, then add metrics to represent the criteria for the two answers related to the previous metrics and disable outdated ones
-- hidden until everyone registered to not influence others
+- can only see other points-of-view after registering own, to not get influenced by others
+- want to give two answers?, then create metrics to represent the new criteria for the two answers
 
-review points-of-view
+graph points-of-view
 - if points-of-view are too different
-  - misunderstood criteria?, then add metrics with refined criteria consensus related to the previous metrics and disable outdated ones
+  - misunderstood criteria?, then create metrics with refined criteria consensus
   - different perspectives on the same criteria?, they are all valid points of view!, maybe register again to add details
-
-see evolution of metrics
+- see evolution of metrics
 
 METRIC OPERATIONS TO IMPLEMENT:
 
-* add (name, criteria, maybe-refined-metrics)
-* disable
-* re-enable
-* register (point-of-view, date, health, slope, maybe-health-reason, maybe-slope-reason)
+* list -> [metric{name, criteria}] - SUBSCRIBED TO UPDATES
+* graph -> [metric{[pov{date, point-of-view, health{rating, reason}, slope{rating, reason}}] - SUBSCRIBED TO UPDATES
+* create (name, criteria) - PUBLISH UPDATES TO (list, graph)
+* register (date, point-of-view, health{maybe-rating, maybe-reason}, slope{maybe-rating, maybe-reason}) - PUBLISH UPDATES TO (graph)
 
 MAYBE IN THE FUTURE:
+
+link refined metrics to the metrics that inspired it (e.g: when wanting to split a metric into two)
+
+* disable metric
+* re-enable metric
 
 team consensus about situation
 * root cause of the problem
 * plan of improvement(None | keep doing what you're doing | do something else)
 
-register many teams and compare with other teams
+many teams and compare them
