@@ -27,13 +27,10 @@ then, install inline-source-cli
 
 ### install backend dependencies
 
-first, install ruby:
-more info: https://www.ruby-lang.org/en/documentation/installation/
+first, install elixir:
+more info: https://elixir-lang.org/install.html
 
-then, install bundler:
-more info: https://bundler.io/#getting-started
-
-then, `bundle install`
+then, `cd ./backend; mix deps.get`
 
 ### test frontend
 
