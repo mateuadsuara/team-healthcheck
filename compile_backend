@@ -1,0 +1,4 @@
+#!/bin/bash
+
+pushd `dirname "$0"`/backend
+mix do deps.get, deps.compile, dialyzer

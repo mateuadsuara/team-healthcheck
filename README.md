@@ -44,6 +44,10 @@ then, `cd ./backend; mix deps.get`
 
 `./compile_frontend`
 
+### compile backend
+
+`./compile_backend`
+
 ### start backend
 
 `./start_backend`

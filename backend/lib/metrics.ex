@@ -1,4 +1,7 @@
 defmodule Metrics do
+  @type state() :: %{merics: any(), names: any()}
+
+  @spec new() :: {:ok, state()}
   def new do
     initial_state = %{
       :metrics => [],
