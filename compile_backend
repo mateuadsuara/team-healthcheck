@@ -1,4 +1,5 @@
 #!/bin/bash
 
 pushd `dirname "$0"`/backend
-mix do deps.get, deps.compile, dialyzer
+mix do deps.get, deps.compile && \
+mix dialyzer --halt-exit-status
