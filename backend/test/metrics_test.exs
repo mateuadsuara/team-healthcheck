@@ -11,7 +11,7 @@ defmodule MetricsTest do
     criteria = '::criteria::'
 
     metrics = new()
-              |> add(name, criteria)
+              |> add(%{name: name, criteria: criteria})
 
     assert metrics |> graph == [
       %{
@@ -24,10 +24,10 @@ defmodule MetricsTest do
 
   test "cannot add two metrics with the same name" do
     metrics = new()
-              |> add('::name1::', '::criteria1::')
+              |> add(%{name: '::name1::', criteria: '::criteria1::'})
 
 
-    assert metrics |> add('::name1::', '::criteria2::') ==
+    assert metrics |> add(%{name: '::name1::', criteria: '::criteria2::'}) ==
       {:error, :existent_metric}
   end
 
@@ -38,8 +38,8 @@ defmodule MetricsTest do
     criteria2 = '::criteria2::'
 
     metrics = new()
-              |> add(name1, criteria1)
-              |> add(name2, criteria2)
+              |> add(%{name: name1, criteria: criteria1})
+              |> add(%{name: name2, criteria: criteria2})
 
     assert metrics |> graph == [
       %{
@@ -64,8 +64,8 @@ defmodule MetricsTest do
     slope = 0
 
     metrics = new()
-              |> add(name, criteria)
-              |> register(name, date, person, health, slope)
+              |> add(%{name: name, criteria: criteria})
+              |> register(name, %{date: date, person: person, health: health, slope: slope})
 
     assert metrics |> graph == [
       %{
@@ -85,7 +85,7 @@ defmodule MetricsTest do
 
   test "cannot register a point of view for an unexisting metric name" do
     res = new()
-          |> register('::name::', Time.utc_now, '::person::', 1, 0)
+          |> register('::name::', %{date: Time.utc_now, person: '::person::', health: 1, slope: 0})
 
     assert res ==
       {:error, :nonexistent_metric}
@@ -104,10 +104,9 @@ defmodule MetricsTest do
     slope2 = 1
 
     metrics = new()
-              |> add(name, criteria)
-              |> register(name, date1, person1, health1, slope1)
-              |> register(name, date2, person2, health2, slope2)
-
+              |> add(%{name: name, criteria: criteria})
+              |> register(name, %{date: date1, person: person1, health: health1, slope: slope1})
+              |> register(name, %{date: date2, person: person2, health: health2, slope: slope2})
     assert metrics |> graph == [
       %{
         name: name,
