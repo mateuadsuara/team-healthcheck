@@ -1,20 +1,42 @@
 defmodule Metrics do
-  @type state() :: %{merics: any(), names: any()}
+  @opaque state :: %{
+    required(:metrics) => [stored_metric],
+    required(:names) => MapSet.t
+  }
 
-  @spec new() :: {:ok, state()}
+  @type stored_metric :: %{
+    required(:name) => String.t,
+    required(:criteria) => String.t,
+    required(:points_of_view) => [point_of_view]
+  }
+  @type point_of_view :: %{
+    required(:date) => date,
+    required(:person) => String.t,
+    required(:health) => -127..128,
+    required(:slope) => -127..128
+  }
+  @type date :: any
+
+  @spec new() :: {:ok, state}
   def new do
     initial_state = %{
-      :metrics => [],
-      :names => MapSet.new()
+      metrics: [],
+      names: MapSet.new()
     }
     {:ok, initial_state}
   end
 
+  @spec graph({:ok, state} | state) :: [stored_metric]
   def graph({:ok, state}), do: graph(state)
-  def graph(%{metrics: metrics}) do
+  def graph(%{metrics: metrics, names: _names}) do
     metrics
   end
 
+  @type metric_to_add :: %{
+    required(:name) => String.t,
+    required(:criteria) => String.t
+  }
+  @spec add({:ok, state} | state, metric_to_add) :: {:error, :existent_metric} | {:ok, state}
   def add({:ok, state}, metric), do: add(state, metric)
   def add(
     %{metrics: metrics, names: names} = state,

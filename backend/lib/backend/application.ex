@@ -19,7 +19,7 @@ defmodule Backend.Application do
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Backend.Supervisor]
 
-    Logger.info("Server listening on port #{port}")
+    :ok = Logger.info("Server listening on port #{port}")
 
     Supervisor.start_link(children, opts)
   end
