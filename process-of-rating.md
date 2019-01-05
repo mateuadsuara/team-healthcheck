@@ -22,9 +22,8 @@ graph points-of-view
 
 METRIC OPERATIONS TO IMPLEMENT:
 
-* list -> [metric{name, criteria}] - SUBSCRIBED TO UPDATES
 * graph -> [metric{[pov{date, point-of-view, health{rating, reason}, slope{rating, reason}}] - SUBSCRIBED TO UPDATES
-* create (name, criteria) - PUBLISH UPDATES TO (list, graph)
+* create (name, criteria) - PUBLISH UPDATES TO (graph)
 * register (date, point-of-view, health{maybe-rating, maybe-reason}, slope{maybe-rating, maybe-reason}) - PUBLISH UPDATES TO (graph)
 
 MAYBE IN THE FUTURE:
