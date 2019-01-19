@@ -1,77 +1,111 @@
 defmodule Metrics do
-  @opaque state :: %{
-    required(:metrics) => [stored_metric],
-    required(:names) => MapSet.t
-  }
+  defmodule PointOfView do
+    @enforce_keys [:date, :person, :health, :slope]
+    defstruct [:date, :person, :health, :slope]
 
-  @type stored_metric :: %{
-    required(:name) => String.t,
-    required(:criteria) => String.t,
-    required(:points_of_view) => [point_of_view]
-  }
-  @type point_of_view :: %{
-    required(:date) => date,
-    required(:person) => String.t,
-    required(:health) => -127..128,
-    required(:slope) => -127..128
-  }
-  @type date :: any
+    @type signed_byte :: -127..128
 
-  @spec new() :: {:ok, state}
-  def new do
-    initial_state = %{
-      metrics: [],
-      names: MapSet.new()
+    @type date :: Time.t()
+    @type person :: String.t()
+    @type range :: signed_byte()
+
+    @type t :: %__MODULE__{
+      date: date(),
+      person: person(),
+      health: range(),
+      slope: range()
     }
-    {:ok, initial_state}
   end
 
-  @spec graph({:ok, state} | state) :: [stored_metric]
-  def graph({:ok, state}), do: graph(state)
-  def graph(%{metrics: metrics, names: _names}) do
-    metrics
+  defmodule Metric do
+    @enforce_keys [:name, :criteria, :points_of_view]
+    defstruct [:name, :criteria, :points_of_view]
+
+    @type name :: String.t()
+    @type criteria :: String.t()
+
+    @type t :: %__MODULE__{
+      name: name(),
+      criteria: criteria(),
+      points_of_view: list(PointOfView.t())
+    }
   end
+
+  @enforce_keys [:_metrics, :_names]
+  defstruct [:_metrics, :_names]
+
+  @opaque t :: %__MODULE__{
+    _metrics: list(Metric.t()),
+    _names: MapSet.t(Metric.name())
+  }
+
+  @type graph :: list(Metric.t())
+
+  @spec new() :: {:ok, internal_state :: t()}
+  def new do
+    internal_state = %Metrics{
+      _metrics: [],
+      _names: MapSet.new()
+    }
+    {:ok, internal_state}
+  end
+
+  @spec graph(internal_state :: t()) :: {:ok, graph :: graph()}
+  def graph(
+    %Metrics{_metrics: metrics}
+  ) do
+    {:ok, metrics}
+  end
+  def graph({:ok, internal_state}), do: graph(internal_state)
 
   @type metric_to_add :: %{
-    required(:name) => String.t,
-    required(:criteria) => String.t
+    required(:name) => Metric.name(),
+    required(:criteria) => Metric.criteria()
   }
-  @spec add({:ok, state} | state, metric_to_add) :: {:error, :existent_metric} | {:ok, state}
-  def add({:ok, state}, metric), do: add(state, metric)
+  @spec add(internal_state :: t(), metric_to_add()) :: {:error, :existent_metric} | {:ok, internal_state :: t()}
   def add(
-    %{metrics: metrics, names: names} = state,
-    %{name: name, criteria: _criteria} = metric
+    %Metrics{_metrics: metrics, _names: names} = internal_state,
+    %{name: name, criteria: criteria}
   ) do
     if MapSet.member?(names, name) do
       {:error, :existent_metric}
     else
-      new_metric = Map.put(metric, :points_of_view, [])
-      {:ok, %{state |
-        metrics: [new_metric | metrics],
-        names: MapSet.put(names, name)
+      new_metric = %Metric{name: name, criteria: criteria, points_of_view: []}
+      {:ok, %Metrics{internal_state |
+        _metrics: [new_metric | metrics],
+        _names: MapSet.put(names, name)
       }}
     end
   end
+  def add({:ok, internal_state}, metric_to_add), do: add(internal_state, metric_to_add)
 
-  def register({:ok, state}, metric_name, point_of_view), do: register(state, metric_name, point_of_view)
+  @type point_of_view_to_register :: %{
+    required(:metric_name) => Metric.name(),
+    required(:date) => PointOfView.date(),
+    required(:person) => PointOfView.person(),
+    required(:health) => PointOfView.range(),
+    required(:slope) => PointOfView.range()
+  }
+  @spec register(internal_state :: t(), point_of_view_to_register()) :: {:error, :nonexistent_metric} | {:ok, internal_state :: t()}
   def register(
-    %{metrics: metrics, names: names} = state,
-    metric_name,
-    %{date: _date, person: _person, health: _health, slope: _slope} = point_of_view
+    %Metrics{_metrics: metrics, _names: names} = internal_state,
+    %{metric_name: metric_name, date: date, person: person, health: health, slope: slope}
   ) do
     if !MapSet.member?(names, metric_name) do
       {:error, :nonexistent_metric}
     else
-      {:ok, %{state |
-        metrics: update_metrics(metrics, metric_name, point_of_view)
+      new_point_of_view = %PointOfView{date: date, person: person, health: health, slope: slope}
+      {:ok, %Metrics{internal_state |
+        _metrics: update_metrics(metrics, metric_name, new_point_of_view)
       }}
     end
   end
-  defp update_metrics(metrics, metric_name, point_of_view) do
+  def register({:ok, internal_state}, point_of_view_to_register), do: register(internal_state, point_of_view_to_register)
+  defp update_metrics(metrics, metric_name, new_point_of_view) do
     Enum.map(metrics, fn(metric) ->
       if metric.name == metric_name do
         %{metric |
-          points_of_view: [point_of_view | metric.points_of_view]
+          points_of_view: [new_point_of_view | metric.points_of_view]
         }
       else
         metric
