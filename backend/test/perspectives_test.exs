@@ -1,8 +1,8 @@
-defmodule MetricsTest do
+defmodule PerspectivesTest do
   use ExUnit.Case
-  import Metrics
-  alias Metrics.Metric
-  alias Metrics.PointOfView
+  import Perspectives
+  alias Perspectives.Metric
+  alias Perspectives.PointOfView
 
   test "starts with no metrics" do
     {:ok, g} = new()
@@ -16,7 +16,7 @@ defmodule MetricsTest do
     criteria = '::criteria::'
 
     {:ok, g} = new()
-               |> add(%{name: name, criteria: criteria})
+               |> add_metric(%{name: name, criteria: criteria})
                |> graph()
 
     assert g == [
@@ -30,8 +30,8 @@ defmodule MetricsTest do
 
   test "cannot add two metrics with the same name" do
     res = new()
-          |> add(%{name: '::name1::', criteria: '::criteria1::'})
-          |> add(%{name: '::name1::', criteria: '::criteria2::'})
+          |> add_metric(%{name: '::name1::', criteria: '::criteria1::'})
+          |> add_metric(%{name: '::name1::', criteria: '::criteria2::'})
 
     assert res == {:error, :existent_metric}
   end
@@ -43,8 +43,8 @@ defmodule MetricsTest do
     criteria2 = '::criteria2::'
 
     {:ok, g} = new()
-               |> add(%{name: name1, criteria: criteria1})
-               |> add(%{name: name2, criteria: criteria2})
+               |> add_metric(%{name: name1, criteria: criteria1})
+               |> add_metric(%{name: name2, criteria: criteria2})
                |> graph()
 
     assert g == [
@@ -70,8 +70,8 @@ defmodule MetricsTest do
     slope = 0
 
     {:ok, g} = new()
-               |> add(%{name: name, criteria: criteria})
-               |> register(%{metric_name: name, date: date, person: person, health: health, slope: slope})
+               |> add_metric(%{name: name, criteria: criteria})
+               |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
                |> graph()
 
     assert g == [
@@ -92,7 +92,7 @@ defmodule MetricsTest do
 
   test "cannot register a point of view for an unexisting metric name" do
     res = new()
-          |> register(%{metric_name: '::name::', date: Time.utc_now, person: '::person::', health: 1, slope: 0})
+          |> register_point_of_view(%{metric_name: '::name::', date: Time.utc_now, person: '::person::', health: 1, slope: 0})
 
     assert res == {:error, :nonexistent_metric}
   end
@@ -110,9 +110,9 @@ defmodule MetricsTest do
     slope2 = 1
 
     {:ok, g} = new()
-               |> add(%{name: name, criteria: criteria})
-               |> register(%{metric_name: name, date: date1, person: person1, health: health1, slope: slope1})
-               |> register(%{metric_name: name, date: date2, person: person2, health: health2, slope: slope2})
+               |> add_metric(%{name: name, criteria: criteria})
+               |> register_point_of_view(%{metric_name: name, date: date1, person: person1, health: health1, slope: slope1})
+               |> register_point_of_view(%{metric_name: name, date: date2, person: person2, health: health2, slope: slope2})
                |> graph()
 
     assert g == [
