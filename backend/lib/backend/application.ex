@@ -13,6 +13,7 @@ defmodule Backend.Application do
     children = [
       # Starts a server by calling: Backend.Router.start_link(...)
       {Plug.Cowboy, scheme: :http, plug: Backend.Router, options: [port: port]},
+      {PerspectivesServer, name: PerspectivesServer}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
