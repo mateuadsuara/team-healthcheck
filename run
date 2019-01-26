@@ -1,4 +1,4 @@
 #!/bin/bash
 
 pushd `dirname "$0"`/
-./compile_frontend && ./start_backend
+./compile_frontend && ./compile_backend && ./start_backend
