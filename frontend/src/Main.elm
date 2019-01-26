@@ -2,6 +2,31 @@ module Main exposing (main)
 
 import Browser
 import Html exposing (Html, div, text)
+import Http
+import Time
+
+
+type alias Range =
+    Int
+
+
+type alias PointOfView =
+    { date : Time.Posix
+    , person : String
+    , health : Range
+    , slope : Range
+    }
+
+
+type alias Metric =
+    { name : String
+    , criteria : String
+    , points_of_view : List PointOfView
+    }
+
+
+type alias Graph =
+    List Metric
 
 
 type alias Flags =
@@ -9,11 +34,13 @@ type alias Flags =
 
 
 type Model
-    = NoModel
+    = Loading
+    | Failed
+    | Loaded { graph : String }
 
 
 type Message
-    = NoMessage
+    = GotGraph (Result Http.Error String)
 
 
 main : Program Flags Model Message
@@ -28,20 +55,35 @@ main =
 
 init : Flags -> ( Model, Cmd Message )
 init flags =
-    ( NoModel, Cmd.none )
+    ( Loading
+    , Http.get
+        { url = "/graph"
+        , expect = Http.expectString GotGraph
+        }
+    )
 
 
 view : Model -> Html Message
 view model =
-    div []
-        []
+    case model of
+        Loading ->
+            text "Loading..."
+
+        Failed ->
+            text "Failed loading! :( Try reloading the page"
+
+        Loaded { graph } ->
+            text graph
 
 
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
     case msg of
-        NoMessage ->
-            ( model, Cmd.none )
+        GotGraph (Ok graph) ->
+            ( Loaded { graph = graph }, Cmd.none )
+
+        GotGraph (Err _) ->
+            ( Failed, Cmd.none )
 
 
 subscriptions : Model -> Sub Message
