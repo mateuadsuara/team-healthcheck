@@ -24,6 +24,7 @@ defmodule Backend.MixProject do
   defp deps do
     [
       {:plug_cowboy, "~> 2.0.1"},
+      {:poison, "~> 4.0"},
       {:dialyxir, "~> 0.5.1", only: [:dev], runtime: false}
     ]
   end

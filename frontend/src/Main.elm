@@ -1,8 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, div, text)
+import Html exposing (Html, div, h1, li, text, ul)
 import Http
+import Json.Decode exposing (Decoder, at, decodeString, int, list, map3, map4, string)
 import Time
 
 
@@ -11,7 +12,7 @@ type alias Range =
 
 
 type alias PointOfView =
-    { date : Time.Posix
+    { date : String --Time.Posix
     , person : String
     , health : Range
     , slope : Range
@@ -33,10 +34,15 @@ type alias Flags =
     Bool
 
 
+type LoadError
+    = ConnectionProblem
+    | MalformedPayload
+
+
 type Model
     = Loading
-    | Failed
-    | Loaded { graph : String }
+    | Failed LoadError
+    | Loaded { graph : Graph }
 
 
 type Message
@@ -69,21 +75,63 @@ view model =
         Loading ->
             text "Loading..."
 
-        Failed ->
-            text "Failed loading! :( Try reloading the page"
+        Failed ConnectionProblem ->
+            text "Failed loading! :( Check your connection and try reloading"
+
+        Failed MalformedPayload ->
+            text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
         Loaded { graph } ->
-            text graph
+            viewGraph graph
+
+
+viewGraph : Graph -> Html Message
+viewGraph graph =
+    div []
+        [ h1 [] [ text "Metrics:" ]
+        , ul []
+            (List.map
+                (\metric -> li [] [ text metric.name ])
+                graph
+            )
+        ]
 
 
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
     case msg of
-        GotGraph (Ok graph) ->
-            ( Loaded { graph = graph }, Cmd.none )
+        GotGraph (Ok json) ->
+            case decodeString graphDecoder json of
+                Ok graph ->
+                    ( Loaded { graph = graph }, Cmd.none )
+
+                Err _ ->
+                    ( Failed MalformedPayload, Cmd.none )
 
         GotGraph (Err _) ->
-            ( Failed, Cmd.none )
+            ( Failed ConnectionProblem, Cmd.none )
+
+
+graphDecoder : Decoder Graph
+graphDecoder =
+    list metricDecoder
+
+
+metricDecoder : Decoder Metric
+metricDecoder =
+    map3 Metric
+        (at [ "name" ] string)
+        (at [ "criteria" ] string)
+        (at [ "points_of_view" ] (list pointOfViewDecoder))
+
+
+pointOfViewDecoder : Decoder PointOfView
+pointOfViewDecoder =
+    map4 PointOfView
+        (at [ "date" ] string)
+        (at [ "person" ] string)
+        (at [ "health" ] int)
+        (at [ "slope" ] int)
 
 
 subscriptions : Model -> Sub Message

@@ -19,7 +19,7 @@ defmodule Backend.Router do
   end
 
   get "/graph" do
-    send_resp(conn, 200, inspect(PerspectivesServer.graph))
+    send_resp(conn, 200, Poison.encode!(PerspectivesServer.graph))
   end
 
   post "/add_metric/:name/:criteria" do
@@ -27,7 +27,7 @@ defmodule Backend.Router do
       name: name,
       criteria: criteria
     })
-    send_resp(conn, 200, inspect(res))
+    send_resp(conn, 200, Poison.encode!(res))
   end
 
   post "/register_point_of_view/:metric_name/:date/:person/:health/:slope" do
@@ -38,7 +38,7 @@ defmodule Backend.Router do
       health: health,
       slope: slope
     })
-    send_resp(conn, 200, inspect(res))
+    send_resp(conn, 200, Poison.encode!(res))
   end
 
   match _ do
