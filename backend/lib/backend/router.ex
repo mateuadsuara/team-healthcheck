@@ -31,7 +31,12 @@ defmodule Backend.Router do
     send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
-  post "/register_point_of_view/:metric_name/:date/:person/:health/:slope" do
+  post "/register_point_of_view" do
+    metric_name = conn.params["metric_name"]
+    date = conn.params["date"]
+    person = conn.params["person"]
+    {health, ""} = Integer.parse(conn.params["health"])
+    {slope, ""} = Integer.parse(conn.params["slope"])
     {res, _} = PerspectivesServer.register_point_of_view(%{
       metric_name: metric_name,
       date: date,
@@ -39,7 +44,7 @@ defmodule Backend.Router do
       health: health,
       slope: slope
     })
-    send_resp(conn, 200, Poison.encode!(res))
+    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
   match _ do

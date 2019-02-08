@@ -129,6 +129,7 @@ view model =
                 [ viewMetricForm metricToAdd
                 , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
+                , viewPointOfViewForm graph
                 ]
 
 
@@ -146,10 +147,31 @@ viewGraph graph =
 viewMetricForm : MetricToAdd -> Html Message
 viewMetricForm metricToAdd =
     Html.form [ method "post", action "/add_metric" ]
-        [ input [ type_ "text", placeholder "Name", name "name", value metricToAdd.name ] []
-        , input [ type_ "text", placeholder "Criteria", name "criteria", value metricToAdd.criteria ] []
+        [ input [ type_ "text", name "name", placeholder "Name", value metricToAdd.name, required True ] []
+        , input [ type_ "text", name "criteria", placeholder "Criteria", value metricToAdd.criteria, required True ] []
         , input [ type_ "submit", value "Add Metric" ] []
         ]
+
+
+viewPointOfViewForm : Graph -> Html Message
+viewPointOfViewForm graph =
+    Html.form [ method "post", action "/register_point_of_view" ]
+        [ viewDropdown [ name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
+        , input [ type_ "date", name "date", required True ] []
+        , input [ type_ "text", name "person", placeholder "Person", required True ] []
+        , input [ type_ "range", name "health", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
+        , input [ type_ "range", name "slope", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
+        , input [ type_ "submit", value "Register Point Of View" ] []
+        ]
+
+
+viewDropdown : List (Attribute msg) -> (e -> { value : String, text : String }) -> List e -> Html msg
+viewDropdown attrs optionFn options =
+    select attrs
+        (List.map
+            (\e -> option [ value (optionFn e).value ] [ text (optionFn e).text ])
+            options
+        )
 
 
 update : Message -> Model -> ( Model, Cmd Message )
