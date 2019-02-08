@@ -28,7 +28,7 @@ defmodule Backend.Router do
       name: name,
       criteria: criteria
     })
-    send_resp(conn, 200, Poison.encode!(res))
+    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
   post "/register_point_of_view/:metric_name/:date/:person/:health/:slope" do
