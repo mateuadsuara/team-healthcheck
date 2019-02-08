@@ -19,6 +19,15 @@ type alias PointOfView =
     }
 
 
+pointOfViewDecoder : Decoder PointOfView
+pointOfViewDecoder =
+    map4 PointOfView
+        (at [ "date" ] string)
+        (at [ "person" ] string)
+        (at [ "health" ] int)
+        (at [ "slope" ] int)
+
+
 type alias Metric =
     { name : String
     , criteria : String
@@ -26,8 +35,21 @@ type alias Metric =
     }
 
 
+metricDecoder : Decoder Metric
+metricDecoder =
+    map3 Metric
+        (at [ "name" ] string)
+        (at [ "criteria" ] string)
+        (at [ "points_of_view" ] (list pointOfViewDecoder))
+
+
 type alias Graph =
     List Metric
+
+
+graphDecoder : Decoder Graph
+graphDecoder =
+    list metricDecoder
 
 
 type alias Flags =
@@ -110,28 +132,6 @@ update msg model =
 
         GotGraph (Err _) ->
             ( Failed ConnectionProblem, Cmd.none )
-
-
-graphDecoder : Decoder Graph
-graphDecoder =
-    list metricDecoder
-
-
-metricDecoder : Decoder Metric
-metricDecoder =
-    map3 Metric
-        (at [ "name" ] string)
-        (at [ "criteria" ] string)
-        (at [ "points_of_view" ] (list pointOfViewDecoder))
-
-
-pointOfViewDecoder : Decoder PointOfView
-pointOfViewDecoder =
-    map4 PointOfView
-        (at [ "date" ] string)
-        (at [ "person" ] string)
-        (at [ "health" ] int)
-        (at [ "slope" ] int)
 
 
 subscriptions : Model -> Sub Message
