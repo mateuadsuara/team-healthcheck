@@ -126,9 +126,9 @@ view model =
 
         Loaded { graph, metricToAdd } ->
             div []
-                [ h1 [] [ text "Metrics:" ]
+                [ viewMetricForm metricToAdd
+                , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
-                , viewMetricForm metricToAdd
                 ]
 
 
@@ -137,7 +137,7 @@ viewGraph graph =
     div []
         [ ul []
             (List.map
-                (\metric -> li [] [ text metric.name ])
+                (\metric -> li [] [ text (metric.name ++ " - " ++ metric.criteria) ])
                 graph
             )
         ]
