@@ -1,7 +1,9 @@
 module Main exposing (main)
 
 import Browser
-import Html exposing (Html, div, h1, li, text, ul)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (onInput)
 import Http
 import Json.Decode exposing (Decoder, at, decodeString, int, list, map3, map4, string)
 import Time
@@ -28,9 +30,17 @@ pointOfViewDecoder =
         (at [ "slope" ] int)
 
 
+type alias MetricName =
+    String
+
+
+type alias MetricCriteria =
+    String
+
+
 type alias Metric =
-    { name : String
-    , criteria : String
+    { name : MetricName
+    , criteria : MetricCriteria
     , points_of_view : List PointOfView
     }
 
@@ -41,6 +51,12 @@ metricDecoder =
         (at [ "name" ] string)
         (at [ "criteria" ] string)
         (at [ "points_of_view" ] (list pointOfViewDecoder))
+
+
+type alias MetricToAdd =
+    { name : MetricName
+    , criteria : MetricCriteria
+    }
 
 
 type alias Graph =
@@ -64,7 +80,7 @@ type LoadError
 type Model
     = Loading
     | Failed LoadError
-    | Loaded { graph : Graph }
+    | Loaded { graph : Graph, metricToAdd : MetricToAdd }
 
 
 type Message
@@ -91,6 +107,11 @@ init flags =
     )
 
 
+initMetricToAdd : MetricToAdd
+initMetricToAdd =
+    { name = "", criteria = "" }
+
+
 view : Model -> Html Message
 view model =
     case model of
@@ -103,19 +124,31 @@ view model =
         Failed MalformedPayload ->
             text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
-        Loaded { graph } ->
-            viewGraph graph
+        Loaded { graph, metricToAdd } ->
+            div []
+                [ h1 [] [ text "Metrics:" ]
+                , viewGraph graph
+                , viewMetricForm metricToAdd
+                ]
 
 
 viewGraph : Graph -> Html Message
 viewGraph graph =
     div []
-        [ h1 [] [ text "Metrics:" ]
-        , ul []
+        [ ul []
             (List.map
                 (\metric -> li [] [ text metric.name ])
                 graph
             )
+        ]
+
+
+viewMetricForm : MetricToAdd -> Html Message
+viewMetricForm metricToAdd =
+    Html.form [ method "post", action "/add_metric" ]
+        [ input [ type_ "text", placeholder "Name", name "name", value metricToAdd.name ] []
+        , input [ type_ "text", placeholder "Criteria", name "criteria", value metricToAdd.criteria ] []
+        , input [ type_ "submit", value "Add Metric" ] []
         ]
 
 
@@ -125,7 +158,7 @@ update msg model =
         GotGraph (Ok json) ->
             case decodeString graphDecoder json of
                 Ok graph ->
-                    ( Loaded { graph = graph }, Cmd.none )
+                    ( Loaded { graph = graph, metricToAdd = initMetricToAdd }, Cmd.none )
 
                 Err _ ->
                     ( Failed MalformedPayload, Cmd.none )

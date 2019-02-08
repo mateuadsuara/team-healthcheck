@@ -7,6 +7,7 @@ defmodule Backend.Router do
 
   use Plug.Router
 
+  plug(Plug.Parsers, parsers: [:urlencoded])
   plug(:match)
   plug(:dispatch)
 
@@ -22,7 +23,9 @@ defmodule Backend.Router do
     send_resp(conn, 200, Poison.encode!(PerspectivesServer.graph))
   end
 
-  post "/add_metric/:name/:criteria" do
+  post "/add_metric" do
+    name = conn.params["name"]
+    criteria = conn.params["criteria"]
     {res, _} = PerspectivesServer.add_metric(%{
       name: name,
       criteria: criteria
