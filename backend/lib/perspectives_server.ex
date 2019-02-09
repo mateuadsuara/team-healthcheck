@@ -1,6 +1,14 @@
 defmodule PerspectivesServer do
   use GenServer
 
+  def serialise() do
+    GenServer.call(this(), :serialise)
+  end
+
+  def deserialise(serialised_state) do
+    GenServer.call(this(), {:deserialise, serialised_state})
+  end
+
   def graph() do
     GenServer.call(this(), :graph)
   end
@@ -27,17 +35,31 @@ defmodule PerspectivesServer do
     {:ok, Perspectives.new()}
   end
 
-  def handle_call(:graph, _from, perspectives) do
-    {:ok, graph} = Perspectives.graph(perspectives)
-    {:reply, graph, perspectives}
+  def handle_call(:graph, _from, current_perspectives) do
+    graph = Perspectives.graph(current_perspectives)
+    {:reply, graph, current_perspectives}
   end
-  def handle_call({function, args}, _from, perspectives) do
-    result = apply(Perspectives, function, [perspectives | args])
+  def handle_call(:serialise, _from, current_perspectives) do
+    serialised = Perspectives.serialise(current_perspectives)
+    {:reply, serialised, current_perspectives}
+  end
+  def handle_call({:deserialise, serialised_state}, _from, current_perspectives) do
+    result = Perspectives.deserialise(serialised_state)
     next_perspectives = case result do
       {:ok, new_perspectives} ->
         new_perspectives
       _ ->
-        perspectives
+        current_perspectives
+    end
+    {:reply, result, next_perspectives}
+  end
+  def handle_call({function, args}, _from, current_perspectives) do
+    result = apply(Perspectives, function, [current_perspectives | args])
+    next_perspectives = case result do
+      {:ok, new_perspectives} ->
+        new_perspectives
+      _ ->
+        current_perspectives
     end
     {:reply, result, next_perspectives}
   end

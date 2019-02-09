@@ -41,6 +41,8 @@ defmodule Perspectives do
 
   @type graph :: list(Metric.t())
 
+  @type serialised_state :: graph()
+
   @spec new() :: {:ok, internal_state :: t()}
   def new do
     internal_state = %Perspectives{
@@ -50,11 +52,27 @@ defmodule Perspectives do
     {:ok, internal_state}
   end
 
-  @spec graph(internal_state :: t()) :: {:ok, graph :: graph()}
+  @spec serialise(internal_state :: t() | {:ok, internal_state :: t()}) :: serialised_state()
+  def serialise(internal_state), do: graph(internal_state)
+
+  @spec deserialise(serialised_state :: serialised_state()) :: {:error, :invalid_serialised_state} | {:ok, internal_state :: t()}
+  def deserialise(serialised_state) do
+    try do
+      metrics = serialised_state
+      names = Enum.reduce(metrics, MapSet.new(), fn metric, names ->
+        MapSet.put(names, metric.name)
+      end)
+      {:ok, %Perspectives{_metrics: metrics, _names: names}}
+    rescue
+      _ -> {:error, :invalid_serialised_state}
+    end
+  end
+
+  @spec graph(internal_state :: t()) :: graph()
   def graph(
     %Perspectives{_metrics: metrics}
   ) do
-    {:ok, metrics}
+    metrics
   end
   def graph({:ok, internal_state}), do: graph(internal_state)
 

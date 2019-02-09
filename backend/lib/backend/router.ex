@@ -4,7 +4,7 @@ defmodule Backend.Router do
 
   use Plug.Router
 
-  plug(Plug.Parsers, parsers: [:urlencoded])
+  plug(Plug.Parsers, parsers: [:urlencoded, :multipart])
   plug(:match)
   plug(:dispatch)
 
@@ -19,6 +19,19 @@ defmodule Backend.Router do
 
   get "/graph" do
     send_resp(conn, 200, Poison.encode!(PerspectivesServer.graph))
+  end
+
+  get "/serialise" do
+    send_resp(conn, 200, Poison.encode!(PerspectivesServer.serialise))
+  end
+
+  post "/deserialise" do
+    serialised_file = conn.params["serialised"]
+    {:ok, serialised_json} = File.read serialised_file.path
+    {res, _} = serialised_json
+               |> Poison.decode!(%{keys: :atoms!})
+               |> PerspectivesServer.deserialise
+    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
   post "/add_metric" do

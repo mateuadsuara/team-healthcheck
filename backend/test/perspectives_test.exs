@@ -5,8 +5,8 @@ defmodule PerspectivesTest do
   alias Perspectives.PointOfView
 
   test "starts with no metrics" do
-    {:ok, g} = new()
-               |> graph()
+    g = new()
+        |> graph()
 
     assert g == []
   end
@@ -15,9 +15,9 @@ defmodule PerspectivesTest do
     name = '::name::'
     criteria = '::criteria::'
 
-    {:ok, g} = new()
-               |> add_metric(%{name: name, criteria: criteria})
-               |> graph()
+    g = new()
+        |> add_metric(%{name: name, criteria: criteria})
+        |> graph()
 
     assert g == [
       %Metric{
@@ -42,10 +42,10 @@ defmodule PerspectivesTest do
     name2 = '::name2::'
     criteria2 = '::criteria2::'
 
-    {:ok, g} = new()
-               |> add_metric(%{name: name1, criteria: criteria1})
-               |> add_metric(%{name: name2, criteria: criteria2})
-               |> graph()
+    g = new()
+        |> add_metric(%{name: name1, criteria: criteria1})
+        |> add_metric(%{name: name2, criteria: criteria2})
+        |> graph()
 
     assert g == [
       %Metric{
@@ -69,10 +69,10 @@ defmodule PerspectivesTest do
     health = 1
     slope = 0
 
-    {:ok, g} = new()
-               |> add_metric(%{name: name, criteria: criteria})
-               |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
-               |> graph()
+    g = new()
+        |> add_metric(%{name: name, criteria: criteria})
+        |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
+        |> graph()
 
     assert g == [
       %Metric{
@@ -109,11 +109,11 @@ defmodule PerspectivesTest do
     health2 = -1
     slope2 = 1
 
-    {:ok, g} = new()
-               |> add_metric(%{name: name, criteria: criteria})
-               |> register_point_of_view(%{metric_name: name, date: date1, person: person1, health: health1, slope: slope1})
-               |> register_point_of_view(%{metric_name: name, date: date2, person: person2, health: health2, slope: slope2})
-               |> graph()
+    g = new()
+        |> add_metric(%{name: name, criteria: criteria})
+        |> register_point_of_view(%{metric_name: name, date: date1, person: person1, health: health1, slope: slope1})
+        |> register_point_of_view(%{metric_name: name, date: date2, person: person2, health: health2, slope: slope2})
+        |> graph()
 
     assert g == [
       %Metric{
@@ -135,5 +135,39 @@ defmodule PerspectivesTest do
         ]
       }
     ]
+  end
+
+  test "can be serialised and deserialised" do
+    name = '::name::'
+    date = Time.utc_now()
+    person = '::person1::'
+    health = 1
+    slope = 0
+
+    perspectives_a = new()
+                     |> add_metric(%{name: name, criteria: '::criteria::'})
+
+    {:ok, perspectives_b} = perspectives_a
+                            |> serialise()
+                            |> deserialise()
+
+    graph_a = perspectives_a
+               |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
+               |> graph()
+
+    graph_b = perspectives_b
+               |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
+               |> graph()
+
+    assert graph_a == graph_b
+  end
+
+  test "fails to deserialise invalid state" do
+    invalid_state = "::invalid serialised state::"
+
+    res = invalid_state
+          |> deserialise()
+
+    assert res == {:error, :invalid_serialised_state}
   end
 end

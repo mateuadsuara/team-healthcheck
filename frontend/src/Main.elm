@@ -148,6 +148,8 @@ view { graphState, metricToAdd, flags } =
                 , viewMetricForm metricToAdd
                 , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
+                , viewExportLink
+                , viewImportForm
                 ]
 
 
@@ -172,6 +174,20 @@ viewPointsOfView povs =
             (\pov -> li [] [ text (pov.date ++ " > " ++ String.fromInt pov.health ++ " : " ++ String.fromInt pov.slope) ])
             povs
         )
+
+
+viewExportLink : Html Message
+viewExportLink =
+    a [ href "/serialise", download "export.json" ]
+        [ text "Export" ]
+
+
+viewImportForm : Html Message
+viewImportForm =
+    Html.form [ method "post", action "/deserialise", enctype "multipart/form-data" ]
+        [ input [ type_ "file", name "serialised", required True ] []
+        , input [ type_ "submit", value "Import" ] []
+        ]
 
 
 viewMetricForm : MetricToAdd -> Html Message
