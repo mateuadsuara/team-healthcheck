@@ -53,12 +53,6 @@ metricDecoder =
         (at [ "points_of_view" ] (list pointOfViewDecoder))
 
 
-type alias MetricToAdd =
-    { name : MetricName
-    , criteria : MetricCriteria
-    }
-
-
 type alias Graph =
     List Metric
 
@@ -93,7 +87,6 @@ type GraphState
 
 type alias Model =
     { flags : Flags
-    , metricToAdd : MetricToAdd
     , graphState : GraphState
     }
 
@@ -115,7 +108,6 @@ main =
 init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
-      , metricToAdd = initMetricToAdd
       , graphState = Loading
       }
     , Http.get
@@ -125,13 +117,8 @@ init flags =
     )
 
 
-initMetricToAdd : MetricToAdd
-initMetricToAdd =
-    { name = "", criteria = "" }
-
-
 view : Model -> Html Message
-view { graphState, metricToAdd, flags } =
+view { graphState, flags } =
     case graphState of
         Loading ->
             text "Loading..."
@@ -145,7 +132,7 @@ view { graphState, metricToAdd, flags } =
         Loaded { graph } ->
             div []
                 [ viewPointOfViewForm graph flags.startDate
-                , viewMetricForm metricToAdd
+                , viewMetricForm
                 , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
                 , viewExportLink
@@ -190,11 +177,11 @@ viewImportForm =
         ]
 
 
-viewMetricForm : MetricToAdd -> Html Message
-viewMetricForm metricToAdd =
+viewMetricForm : Html Message
+viewMetricForm =
     Html.form [ method "post", action "/add_metric" ]
-        [ input [ type_ "text", name "name", placeholder "Name", value metricToAdd.name, required True ] []
-        , input [ type_ "text", name "criteria", placeholder "Criteria", value metricToAdd.criteria, required True ] []
+        [ input [ type_ "text", name "name", placeholder "Name", required True ] []
+        , input [ type_ "text", name "criteria", placeholder "Criteria", required True ] []
         , input [ type_ "submit", value "Add Metric" ] []
         ]
 
