@@ -68,8 +68,16 @@ graphDecoder =
     list metricDecoder
 
 
+type alias StartDate =
+    { year : Int
+    , month : Int
+    , day : Int
+    }
+
+
 type alias Flags =
-    Bool
+    { startDate : StartDate
+    }
 
 
 type LoadError
@@ -77,10 +85,17 @@ type LoadError
     | MalformedPayload
 
 
-type Model
+type GraphState
     = Loading
     | Failed LoadError
-    | Loaded { graph : Graph, metricToAdd : MetricToAdd }
+    | Loaded { graph : Graph }
+
+
+type alias Model =
+    { flags : Flags
+    , metricToAdd : MetricToAdd
+    , graphState : GraphState
+    }
 
 
 type Message
@@ -99,7 +114,10 @@ main =
 
 init : Flags -> ( Model, Cmd Message )
 init flags =
-    ( Loading
+    ( { flags = flags
+      , metricToAdd = initMetricToAdd
+      , graphState = Loading
+      }
     , Http.get
         { url = "/graph"
         , expect = Http.expectString GotGraph
@@ -113,8 +131,8 @@ initMetricToAdd =
 
 
 view : Model -> Html Message
-view model =
-    case model of
+view { graphState, metricToAdd, flags } =
+    case graphState of
         Loading ->
             text "Loading..."
 
@@ -124,12 +142,12 @@ view model =
         Failed MalformedPayload ->
             text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
-        Loaded { graph, metricToAdd } ->
+        Loaded { graph } ->
             div []
                 [ viewMetricForm metricToAdd
                 , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
-                , viewPointOfViewForm graph
+                , viewPointOfViewForm graph flags.startDate
                 ]
 
 
@@ -153,16 +171,34 @@ viewMetricForm metricToAdd =
         ]
 
 
-viewPointOfViewForm : Graph -> Html Message
-viewPointOfViewForm graph =
+viewPointOfViewForm : Graph -> StartDate -> Html Message
+viewPointOfViewForm graph startDate =
     Html.form [ method "post", action "/register_point_of_view" ]
         [ viewDropdown [ name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
-        , input [ type_ "date", name "date", required True ] []
+        , input [ type_ "date", name "date", value <| startDateForInput startDate, required True ] []
         , input [ type_ "text", name "person", placeholder "Person", required True ] []
         , input [ type_ "range", name "health", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
         , input [ type_ "range", name "slope", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
         , input [ type_ "submit", value "Register Point Of View" ] []
         ]
+
+
+startDateForInput : StartDate -> String
+startDateForInput { year, month, day } =
+    leftZeroesPadding year ++ "-" ++ leftZeroesPadding month ++ "-" ++ leftZeroesPadding day
+
+
+leftZeroesPadding : Int -> String
+leftZeroesPadding num =
+    let
+        input =
+            String.fromInt num
+    in
+    if String.length input == 1 then
+        "0" ++ input
+
+    else
+        input
 
 
 viewDropdown : List (Attribute msg) -> (e -> { value : String, text : String }) -> List e -> Html msg
@@ -176,17 +212,22 @@ viewDropdown attrs optionFn options =
 
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
+    ( { model | graphState = updateGraphState msg model }, Cmd.none )
+
+
+updateGraphState : Message -> Model -> GraphState
+updateGraphState msg model =
     case msg of
         GotGraph (Ok json) ->
             case decodeString graphDecoder json of
                 Ok graph ->
-                    ( Loaded { graph = graph, metricToAdd = initMetricToAdd }, Cmd.none )
+                    Loaded { graph = graph }
 
                 Err _ ->
-                    ( Failed MalformedPayload, Cmd.none )
+                    Failed MalformedPayload
 
         GotGraph (Err _) ->
-            ( Failed ConnectionProblem, Cmd.none )
+            Failed ConnectionProblem
 
 
 subscriptions : Model -> Sub Message
