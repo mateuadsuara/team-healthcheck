@@ -144,22 +144,34 @@ view { graphState, metricToAdd, flags } =
 
         Loaded { graph } ->
             div []
-                [ viewMetricForm metricToAdd
+                [ viewPointOfViewForm graph flags.startDate
+                , viewMetricForm metricToAdd
                 , h1 [] [ text "Metrics:" ]
                 , viewGraph graph
-                , viewPointOfViewForm graph flags.startDate
                 ]
 
 
 viewGraph : Graph -> Html Message
 viewGraph graph =
-    div []
-        [ ul []
-            (List.map
-                (\metric -> li [] [ text (metric.name ++ " - " ++ metric.criteria) ])
-                graph
+    ul []
+        (List.map
+            (\metric ->
+                li []
+                    [ text (metric.name ++ " (" ++ metric.criteria ++ ")")
+                    , viewPointsOfView metric.points_of_view
+                    ]
             )
-        ]
+            graph
+        )
+
+
+viewPointsOfView : List PointOfView -> Html Message
+viewPointsOfView povs =
+    ul []
+        (List.map
+            (\pov -> li [] [ text (pov.date ++ " > " ++ String.fromInt pov.health ++ " : " ++ String.fromInt pov.slope) ])
+            povs
+        )
 
 
 viewMetricForm : MetricToAdd -> Html Message
