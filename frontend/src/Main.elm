@@ -13,6 +13,10 @@ type alias Range =
     Int
 
 
+maxRange =
+    4
+
+
 type alias PointOfView =
     { date : String --Time.Posix
     , person : String
@@ -131,12 +135,18 @@ view { graphState, flags } =
 
         Loaded { graph } ->
             div []
-                [ viewPointOfViewForm graph flags.startDate
+                [ h1 [] [ text "Register a person's point of view:" ]
+                , viewPointOfViewForm graph flags.startDate
+                , h1 [] [ text "Add new metric:" ]
                 , viewMetricForm
-                , h1 [] [ text "Metrics:" ]
+                , h1 [] [ text "View data:" ]
                 , viewGraph graph
+                , h1 [] [ text "Manage data:" ]
+                , text "Warning: the format of this data is subject to change in the future."
+                , h4 [] [ text "Export:" ]
                 , viewExportLink
-                , viewImportForm
+                , h4 [] [ text "Restore:" ]
+                , viewRestoreForm
                 ]
 
 
@@ -146,7 +156,7 @@ viewGraph graph =
         (List.map
             (\metric ->
                 li []
-                    [ text (metric.name ++ " (" ++ metric.criteria ++ ")")
+                    [ text (metric.name ++ " (" ++ metric.criteria ++ ")" ++ " [health: " ++ String.fromFloat (calculateAverageRange <| extractHealths metric.points_of_view) ++ ", slope: " ++ String.fromFloat (calculateAverageRange <| extractSlopes metric.points_of_view) ++ "]")
                     , viewPointsOfView metric.points_of_view
                     ]
             )
@@ -154,11 +164,45 @@ viewGraph graph =
         )
 
 
+extractHealths : List PointOfView -> List Range
+extractHealths povs =
+    List.map (\pov -> pov.health) povs
+
+
+extractSlopes : List PointOfView -> List Range
+extractSlopes povs =
+    List.map (\pov -> pov.slope) povs
+
+
+calculateAverageRange : List Range -> Float
+calculateAverageRange nums =
+    let
+        count =
+            List.length nums
+
+        absNums =
+            List.map (\n -> absRange n) nums
+
+        average =
+            List.sum absNums / toFloat count
+    in
+    if count == 0 then
+        0
+
+    else
+        average
+
+
+absRange : Int -> Float
+absRange rangeValue =
+    toFloat rangeValue / maxRange
+
+
 viewPointsOfView : List PointOfView -> Html Message
 viewPointsOfView povs =
     ul []
         (List.map
-            (\pov -> li [] [ text (pov.date ++ " > " ++ String.fromInt pov.health ++ " : " ++ String.fromInt pov.slope) ])
+            (\pov -> li [] [ text (pov.date ++ " [health: " ++ String.fromFloat (absRange pov.health) ++ ", slope: " ++ String.fromFloat (absRange pov.slope) ++ "] ") ])
             povs
         )
 
@@ -169,19 +213,23 @@ viewExportLink =
         [ text "Export" ]
 
 
-viewImportForm : Html Message
-viewImportForm =
+viewRestoreForm : Html Message
+viewRestoreForm =
     Html.form [ method "post", action "/deserialise", enctype "multipart/form-data" ]
         [ input [ type_ "file", name "serialised", required True ] []
-        , input [ type_ "submit", value "Import" ] []
+        , input [ type_ "submit", value "Restore" ] []
         ]
 
 
 viewMetricForm : Html Message
 viewMetricForm =
     Html.form [ method "post", action "/add_metric" ]
-        [ input [ type_ "text", name "name", placeholder "Name", required True ] []
-        , input [ type_ "text", name "criteria", placeholder "Criteria", required True ] []
+        [ label [ for "name" ] [ text "Name: " ]
+        , input [ type_ "text", id "name", name "name", placeholder "Name", required True ] []
+        , br [] []
+        , label [ for "criteria" ] [ text "Criteria: " ]
+        , input [ type_ "text", id "criteria", name "criteria", placeholder "Criteria", required True ] []
+        , br [] []
         , input [ type_ "submit", value "Add Metric" ] []
         ]
 
@@ -189,11 +237,23 @@ viewMetricForm =
 viewPointOfViewForm : Graph -> StartDate -> Html Message
 viewPointOfViewForm graph startDate =
     Html.form [ method "post", action "/register_point_of_view" ]
-        [ viewDropdown [ name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
-        , input [ type_ "date", name "date", value <| startDateForInput startDate, required True ] []
-        , input [ type_ "text", name "person", placeholder "Person", required True ] []
-        , input [ type_ "range", name "health", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
-        , input [ type_ "range", name "slope", Html.Attributes.min "-2", Html.Attributes.max "2", value "0", required True ] []
+        [ input [ type_ "date", name "date", value <| startDateForInput startDate, required True, hidden True ] []
+        , label [ for "metric_name" ] [ text "Metric: " ]
+        , viewDropdown [ id "metric_name", name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
+        , br [] []
+        , label [ for "person" ] [ text "Who's point of view: " ]
+        , input [ type_ "text", id "person", name "person", placeholder "Person", required True ] []
+        , br [] []
+        , label [ for "health" ] [ text "Health: " ]
+        , span [ style "color" "red" ] [ text " (-1) bad " ]
+        , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+        , span [ style "color" "lime" ] [ text " good (+1)" ]
+        , br [] []
+        , label [ for "slope" ] [ text "Slope: " ]
+        , text " (-1) ⇘ "
+        , input [ type_ "range", id "slope", name "slope", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+        , text " ⇗ (+1)"
+        , br [] []
         , input [ type_ "submit", value "Register Point Of View" ] []
         ]
 
