@@ -25,9 +25,18 @@
           year: now.getFullYear(),
           month: now.getMonth()+1,
           day: now.getDate()
-        }
+        },
+        username: localStorage.getItem("username")
       }
     });
+
+    app.ports.saveUsername.subscribe(function (username) {
+      if (username === "") {
+        localStorage.removeItem("username")
+      } else {
+        localStorage.setItem("username", username)
+      }
+    })
   </script>
 </body>
 </html>

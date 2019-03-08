@@ -1,12 +1,15 @@
-module Main exposing (main)
+port module Main exposing (main)
 
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
 import Json.Decode exposing (Decoder, at, decodeString, int, list, map3, map4, string)
 import Time
+
+
+port saveUsername : Username -> Cmd msg
 
 
 type alias Range =
@@ -75,6 +78,7 @@ type alias StartDate =
 
 type alias Flags =
     { startDate : StartDate
+    , username : Maybe Username
     }
 
 
@@ -93,6 +97,7 @@ type Page
     = PointsOfView
     | Metrics
     | DataManagement
+    | Username
 
 
 type alias Model =
@@ -106,9 +111,15 @@ type alias HttpResult =
     Result Http.Error String
 
 
+type alias Username =
+    String
+
+
 type Message
     = GotGraph HttpResult
     | SetPage Page
+    | SaveUsername Username
+    | CompletedUsername
 
 
 main : Program Flags Model Message
@@ -125,7 +136,12 @@ init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
       , graphState = Loading
-      , currentPage = PointsOfView
+      , currentPage =
+            if flags.username == Nothing then
+                Username
+
+            else
+                PointsOfView
       }
     , Http.get
         { url = "/graph"
@@ -135,7 +151,7 @@ init flags =
 
 
 view : Model -> Html Message
-view { graphState, flags, currentPage } =
+view ({ graphState, flags, currentPage } as model) =
     case graphState of
         Loading ->
             text "Loading..."
@@ -148,9 +164,12 @@ view { graphState, flags, currentPage } =
 
         Loaded { graph } ->
             case currentPage of
+                Username ->
+                    viewUsername model
+
                 DataManagement ->
                     div []
-                        [ viewNavigationLinks
+                        [ viewNavigationLinks model
                         , h1 [] [ text "View data:" ]
                         , viewGraph graph
                         , h1 [] [ text "Manage data:" ]
@@ -163,23 +182,38 @@ view { graphState, flags, currentPage } =
 
                 Metrics ->
                     div []
-                        [ viewNavigationLinks
+                        [ viewNavigationLinks model
                         , viewMetricForm
                         ]
 
                 PointsOfView ->
                     div []
-                        [ viewNavigationLinks
+                        [ viewNavigationLinks model
                         , viewPointOfViewForm graph flags.startDate
                         ]
 
 
-viewNavigationLinks : Html Message
-viewNavigationLinks =
-    div [ class "flex blue w-100 pb3 pa3 bb mb3" ]
-        [ a [ onClick (SetPage PointsOfView), class "ph4" ] [ text "Points of view" ]
-        , a [ onClick (SetPage Metrics), class "ph4" ] [ text "Metrics" ]
-        , a [ onClick (SetPage DataManagement), class "ph4" ] [ text "DataManagement" ]
+viewNavigationLinks : Model -> Html Message
+viewNavigationLinks model =
+    div [ class "flex justify-between blue w-100 pb3 pa3 bb mb3" ]
+        [ div []
+            [ a [ onClick (SetPage PointsOfView), class "pr4" ] [ text "Points of view" ]
+            , a [ onClick (SetPage Metrics), class "pr4" ] [ text "Metrics" ]
+            , a [ onClick (SetPage DataManagement), class "pr4" ] [ text "DataManagement" ]
+            ]
+        , a [ onClick (SetPage Username) ] [ text <| Maybe.withDefault "" model.flags.username ]
+        ]
+
+
+viewUsername : Model -> Html Message
+viewUsername model =
+    let
+        username =
+            Maybe.withDefault "" model.flags.username
+    in
+    Html.form []
+        [ input [ type_ "text", class "", placeholder "Your name", onInput SaveUsername, value username ] []
+        , input [ type_ "submit", onSubmit CompletedUsername, value "Save" ] []
         ]
 
 
@@ -326,6 +360,19 @@ update msg model =
 
         SetPage page ->
             ( { model | currentPage = page }, Cmd.none )
+
+        SaveUsername username ->
+            let
+                flags =
+                    model.flags
+
+                updatedFlags =
+                    { flags | username = Just username }
+            in
+            ( { model | flags = updatedFlags }, saveUsername username )
+
+        CompletedUsername ->
+            ( { model | currentPage = PointsOfView }, Cmd.none )
 
 
 updateGraphState : HttpResult -> Model -> GraphState
