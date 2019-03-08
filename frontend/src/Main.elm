@@ -226,9 +226,12 @@ viewUsername model =
         username =
             Maybe.withDefault "" model.flags.username
     in
-    Html.form []
-        [ input [ type_ "text", class "", placeholder "Your name", onInput SaveUsername, value username ] []
-        , input [ type_ "submit", onSubmit CompletedUsername, value "Save" ] []
+    Html.form [ class "tc ph3" ]
+        [ p [] [ text "Hi!👋😃" ]
+        , p [] [ text "Welcome to the team healthcheck!" ]
+        , p [] [ text "What's your name?" ]
+        , input [ type_ "text", class "", placeholder "Your name", onInput SaveUsername, value username ] []
+        , input [ type_ "submit", onSubmit CompletedUsername, value "Done" ] []
         ]
 
 
