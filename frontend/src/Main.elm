@@ -170,38 +170,53 @@ view ({ graphState, flags, currentPage } as model) =
                 DataManagement ->
                     div []
                         [ viewNavigationLinks model
-                        , h1 [] [ text "View data:" ]
-                        , viewGraph graph
-                        , h1 [] [ text "Manage data:" ]
-                        , text "Warning: the format of this data is subject to change in the future."
-                        , h4 [] [ text "Export:" ]
-                        , viewExportLink
-                        , h4 [] [ text "Restore:" ]
-                        , viewRestoreForm
+                        , div [ class "ph3" ]
+                            [ h1 [] [ text "View data:" ]
+                            , viewGraph graph
+                            , h1 [] [ text "Manage data:" ]
+                            , text "Warning: the format of this data is subject to change in the future."
+                            , h4 [] [ text "Export:" ]
+                            , viewExportLink
+                            , h4 [] [ text "Restore:" ]
+                            , viewRestoreForm
+                            ]
                         ]
 
                 Metrics ->
                     div []
                         [ viewNavigationLinks model
-                        , viewMetricForm
+                        , div [ class "ph3" ] [ viewMetricForm ]
                         ]
 
                 PointsOfView ->
                     div []
                         [ viewNavigationLinks model
-                        , viewPointOfViewForm graph flags.startDate
+                        , div [ class "ph3" ] [ viewPointOfViewForm graph flags.startDate (getUsername model) ]
                         ]
+
+
+pageColor : Model -> Page -> String
+pageColor model page =
+    if model.currentPage == page then
+        " light-blue bold"
+
+    else
+        " blue hover-light-blue"
 
 
 viewNavigationLinks : Model -> Html Message
 viewNavigationLinks model =
+    let
+        classesForPage page =
+            class <| "pr4 pointer" ++ pageColor model page
+    in
     div [ class "flex justify-between blue w-100 pb3 pa3 bb mb3" ]
         [ div []
-            [ a [ onClick (SetPage PointsOfView), class "pr4" ] [ text "Points of view" ]
-            , a [ onClick (SetPage Metrics), class "pr4" ] [ text "Metrics" ]
-            , a [ onClick (SetPage DataManagement), class "pr4" ] [ text "DataManagement" ]
+            [ a [ onClick (SetPage PointsOfView), classesForPage PointsOfView ] [ text "Points of view" ]
+            , a [ onClick (SetPage Metrics), classesForPage Metrics ] [ text "Metrics" ]
+            , a [ onClick (SetPage DataManagement), classesForPage DataManagement ] [ text "DataManagement" ]
             ]
-        , a [ onClick (SetPage Username) ] [ text <| Maybe.withDefault "" model.flags.username ]
+        , a [ onClick (SetPage Username), class "pointer hover-light-blue" ] [ text <| getUsername model ]
         ]
 
 
@@ -301,15 +316,18 @@ viewMetricForm =
         ]
 
 
-viewPointOfViewForm : Graph -> StartDate -> Html Message
-viewPointOfViewForm graph startDate =
+getUsername : Model -> Username
+getUsername model =
+    Maybe.withDefault "" model.flags.username
+
+
+viewPointOfViewForm : Graph -> StartDate -> Username -> Html Message
+viewPointOfViewForm graph startDate username =
     Html.form [ method "post", action "/register_point_of_view" ]
         [ input [ type_ "date", name "date", value <| startDateForInput startDate, required True, hidden True ] []
+        , input [ type_ "text", name "person", value <| username, required True, hidden True ] []
         , label [ for "metric_name" ] [ text "Metric: " ]
         , viewDropdown [ id "metric_name", name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
-        , br [] []
-        , label [ for "person" ] [ text "Who's point of view: " ]
-        , input [ type_ "text", id "person", name "person", placeholder "Person", required True ] []
         , br [] []
         , label [ for "health" ] [ text "Health: " ]
         , span [ class "red" ] [ text " (-1) bad " ]
