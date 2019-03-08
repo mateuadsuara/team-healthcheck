@@ -3,7 +3,7 @@ module Main exposing (main)
 import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
-import Html.Events exposing (onInput)
+import Html.Events exposing (onClick, onInput)
 import Http
 import Json.Decode exposing (Decoder, at, decodeString, int, list, map3, map4, string)
 import Time
@@ -89,14 +89,26 @@ type GraphState
     | Loaded { graph : Graph }
 
 
+type Page
+    = PointsOfView
+    | Metrics
+    | DataManagement
+
+
 type alias Model =
     { flags : Flags
     , graphState : GraphState
+    , currentPage : Page
     }
 
 
+type alias HttpResult =
+    Result Http.Error String
+
+
 type Message
-    = GotGraph (Result Http.Error String)
+    = GotGraph HttpResult
+    | SetPage Page
 
 
 main : Program Flags Model Message
@@ -113,6 +125,7 @@ init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
       , graphState = Loading
+      , currentPage = PointsOfView
       }
     , Http.get
         { url = "/graph"
@@ -122,7 +135,7 @@ init flags =
 
 
 view : Model -> Html Message
-view { graphState, flags } =
+view { graphState, flags, currentPage } =
     case graphState of
         Loading ->
             text "Loading..."
@@ -134,20 +147,40 @@ view { graphState, flags } =
             text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
         Loaded { graph } ->
-            div []
-                [ h1 [] [ text "Register a person's point of view:" ]
-                , viewPointOfViewForm graph flags.startDate
-                , h1 [] [ text "Add new metric:" ]
-                , viewMetricForm
-                , h1 [] [ text "View data:" ]
-                , viewGraph graph
-                , h1 [] [ text "Manage data:" ]
-                , text "Warning: the format of this data is subject to change in the future."
-                , h4 [] [ text "Export:" ]
-                , viewExportLink
-                , h4 [] [ text "Restore:" ]
-                , viewRestoreForm
-                ]
+            case currentPage of
+                DataManagement ->
+                    div []
+                        [ viewNavigationLinks
+                        , h1 [] [ text "View data:" ]
+                        , viewGraph graph
+                        , h1 [] [ text "Manage data:" ]
+                        , text "Warning: the format of this data is subject to change in the future."
+                        , h4 [] [ text "Export:" ]
+                        , viewExportLink
+                        , h4 [] [ text "Restore:" ]
+                        , viewRestoreForm
+                        ]
+
+                Metrics ->
+                    div []
+                        [ viewNavigationLinks
+                        , viewMetricForm
+                        ]
+
+                PointsOfView ->
+                    div []
+                        [ viewNavigationLinks
+                        , viewPointOfViewForm graph flags.startDate
+                        ]
+
+
+viewNavigationLinks : Html Message
+viewNavigationLinks =
+    div [ class "flex blue w-100 pb3 pa3 bb mb3" ]
+        [ a [ onClick (SetPage PointsOfView), class "ph4" ] [ text "Points of view" ]
+        , a [ onClick (SetPage Metrics), class "ph4" ] [ text "Metrics" ]
+        , a [ onClick (SetPage DataManagement), class "ph4" ] [ text "DataManagement" ]
+        ]
 
 
 viewGraph : Graph -> Html Message
@@ -245,9 +278,9 @@ viewPointOfViewForm graph startDate =
         , input [ type_ "text", id "person", name "person", placeholder "Person", required True ] []
         , br [] []
         , label [ for "health" ] [ text "Health: " ]
-        , span [ style "color" "red" ] [ text " (-1) bad " ]
+        , span [ class "red" ] [ text " (-1) bad " ]
         , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
-        , span [ style "color" "lime" ] [ text " good (+1)" ]
+        , span [ class "green" ] [ text " good (+1)" ]
         , br [] []
         , label [ for "slope" ] [ text "Slope: " ]
         , text " (-1) ⇘ "
@@ -287,13 +320,18 @@ viewDropdown attrs optionFn options =
 
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
-    ( { model | graphState = updateGraphState msg model }, Cmd.none )
-
-
-updateGraphState : Message -> Model -> GraphState
-updateGraphState msg model =
     case msg of
-        GotGraph (Ok json) ->
+        GotGraph result ->
+            ( { model | graphState = updateGraphState result model }, Cmd.none )
+
+        SetPage page ->
+            ( { model | currentPage = page }, Cmd.none )
+
+
+updateGraphState : HttpResult -> Model -> GraphState
+updateGraphState result model =
+    case result of
+        Ok json ->
             case decodeString graphDecoder json of
                 Ok graph ->
                     Loaded { graph = graph }
@@ -301,7 +339,7 @@ updateGraphState msg model =
                 Err _ ->
                     Failed MalformedPayload
 
-        GotGraph (Err _) ->
+        Err _ ->
             Failed ConnectionProblem
 
 
