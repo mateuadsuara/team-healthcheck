@@ -19,8 +19,8 @@
   <script>
     const usernameStorageKey = "username"
 
-    var now = new Date()
-    var app = Elm.Main.init({
+    const now = new Date()
+    const app = Elm.Main.init({
       node: document.getElementById("elm-f0111bc4e658d0f98db96260c16f7e49"),
       flags: {
         startDate: {
@@ -38,6 +38,25 @@
       } else {
         localStorage.setItem(usernameStorageKey, username)
       }
+    })
+
+    const socket = new WebSocket("ws://localhost:9292/ws/chat")
+    socket.addEventListener("message", (event) => {
+      console.log(event)
+    })
+    socket.addEventListener("close", () => {
+      console.log("CLOSE")
+    })
+    setInterval(function () {
+      socket.send("ping")
+    }, 10000)
+
+    app.ports.websocketPort.subscribe(function (string) {
+      const payload = JSON.stringify({
+        data: string
+      })
+      console.log(payload)
+      socket.send(payload)
     })
   </script>
 </body>

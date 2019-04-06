@@ -12,6 +12,9 @@ import Time
 port saveUsername : Username -> Cmd msg
 
 
+port websocketPort : String -> Cmd msg
+
+
 type alias Range =
     Int
 
@@ -97,6 +100,7 @@ type Page
     = PointsOfView
     | Metrics
     | DataManagement
+    | Websocket
     | Username
 
 
@@ -120,6 +124,7 @@ type Message
     | SetPage Page
     | SaveUsername Username
     | CompletedUsername
+    | WebsocketSend String
 
 
 main : Program Flags Model Message
@@ -132,6 +137,11 @@ main =
         }
 
 
+initialPage : Page
+initialPage =
+    Websocket
+
+
 init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
@@ -141,7 +151,7 @@ init flags =
                 Username
 
             else
-                PointsOfView
+                initialPage
       }
     , Http.get
         { url = "/graph"
@@ -194,6 +204,12 @@ view ({ graphState, flags, currentPage } as model) =
                         , div [ class "ph3" ] [ viewPointOfViewForm graph flags.startDate (getUsername model) ]
                         ]
 
+                Websocket ->
+                    div []
+                        [ viewNavigationLinks model
+                        , div [ class "ph3" ] [ viewWebsocket model ]
+                        ]
+
 
 pageColor : Model -> Page -> String
 pageColor model page =
@@ -215,8 +231,17 @@ viewNavigationLinks model =
             [ a [ onClick (SetPage PointsOfView), classesForPage PointsOfView ] [ text "Points of view" ]
             , a [ onClick (SetPage Metrics), classesForPage Metrics ] [ text "Metrics" ]
             , a [ onClick (SetPage DataManagement), classesForPage DataManagement ] [ text "DataManagement" ]
+            , a [ onClick (SetPage Websocket), classesForPage Websocket ] [ text "Websocket" ]
             ]
         , a [ onClick (SetPage Username), class "pointer hover-light-blue" ] [ text <| getUsername model ]
+        ]
+
+
+viewWebsocket : Model -> Html Message
+viewWebsocket model =
+    Html.form [ class "tc ph3" ]
+        [ p [] [ text "Websocket!👋😃" ]
+        , input [ type_ "text", class "", placeholder "String", onInput WebsocketSend, value "" ] []
         ]
 
 
@@ -394,6 +419,9 @@ update msg model =
 
         CompletedUsername ->
             ( { model | currentPage = PointsOfView }, Cmd.none )
+
+        WebsocketSend string ->
+            ( model, websocketPort string )
 
 
 updateGraphState : HttpResult -> Model -> GraphState

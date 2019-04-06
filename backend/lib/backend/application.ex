@@ -12,7 +12,17 @@ defmodule Backend.Application do
     # List all child processes to be supervised
     children = [
       # Starts a server by calling: Backend.Router.start_link(...)
-      {Plug.Cowboy, scheme: :http, plug: Backend.Router, options: [port: port]},
+      {Plug.Cowboy, scheme: :http, plug: Backend.Router, options: [
+        port: port,
+        dispatch: [
+          {:_,
+            [
+              {"/ws/[...]", Backend.SocketHandler, []},
+              {:_, Plug.Cowboy.Handler, {Backend.Router, []}}
+            ]
+          }
+        ]
+      ]},
       {PerspectivesServer, name: PerspectivesServer}
     ]
 
