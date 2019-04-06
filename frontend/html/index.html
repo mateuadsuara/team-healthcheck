@@ -17,7 +17,9 @@
 <body>
   <div id="elm-f0111bc4e658d0f98db96260c16f7e49"></div>
   <script>
-    var now = new Date();
+    const usernameStorageKey = "username"
+
+    var now = new Date()
     var app = Elm.Main.init({
       node: document.getElementById("elm-f0111bc4e658d0f98db96260c16f7e49"),
       flags: {
@@ -26,15 +28,15 @@
           month: now.getMonth()+1,
           day: now.getDate()
         },
-        username: localStorage.getItem("username")
+        username: localStorage.getItem(usernameStorageKey)
       }
-    });
+    })
 
     app.ports.saveUsername.subscribe(function (username) {
       if (username === "") {
-        localStorage.removeItem("username")
+        localStorage.removeItem(usernameStorageKey)
       } else {
-        localStorage.setItem("username", username)
+        localStorage.setItem(usernameStorageKey, username)
       }
     })
   </script>
