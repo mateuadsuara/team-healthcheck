@@ -12,8 +12,10 @@ defmodule Backend.Application do
     # List all child processes to be supervised
     children = [
       # Starts a server by calling: Backend.Router.start_link(...)
-      {Plug.Cowboy, scheme: :http, plug: Backend.Router, options: [
+      {Plug.Cowboy, scheme: :https, plug: Backend.Router, options: [
         port: port,
+        keyfile: "/vagrant/cert_key/key.pem",
+        certfile: "/vagrant/cert_key/cert.pem",
         dispatch: [
           {:_,
             [

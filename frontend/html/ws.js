@@ -9,7 +9,7 @@ class WS {
     options.pathname = options.pathname || '/ws'
     options.timeout = options.timeout || 5000
     options.pingInterval = options.pingInterval || 10000
-    const uri = `ws://${options.host}${options.pathname}`
+    const uri = `wss://${options.host}${options.pathname}`
 
     const that = this
 
