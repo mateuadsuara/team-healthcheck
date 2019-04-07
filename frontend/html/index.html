@@ -41,14 +41,25 @@
       }
     })
 
-    const ws = new WS({pathname: '/ws'})
-    ws.connect().then(function(socket) {
-      console.log("connected")
+    new WS({pathname: '/ws'}).connect().then(function(ws) {
+      console.log("Websocket connected!")
+      ws.addEventListener(WS.TICK, (event) => {
+        console.log(event.detail)
+      })
+      ws.addEventListener(WS.RECEIVE, (event) => {
+        console.log(event.detail)
+      })
+      ws.addEventListener(WS.DISCONNECT, () => {
+        console.log("Websocket disconnected!")
+      })
+      ws.addEventListener(WS.RECONNECT, () => {
+        console.log("Websocket reconnected!")
+      })
+      ws.addEventListener(WS.ERROR, () => {
+        console.log("Websocket ERROR!")
+      })
       app.ports.websocketPort.subscribe(function (string) {
-        const payload = JSON.stringify({
-          data: string
-        })
-        socket.send(payload)
+        ws.send({data: string})
       })
     }).catch(function(error) {
       console.log(error)

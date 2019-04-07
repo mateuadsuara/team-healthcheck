@@ -1,5 +1,13 @@
-class WS {
+class WS extends EventTarget {
+  static get TICK() { return "tick" }
+  static get RECEIVE() { return "receive" }
+  static get DISCONNECT() { return "disconnect" }
+  static get RECONNECT() { return "reconnect" }
+  static get ERROR() { return "error" }
+
   constructor(options) {
+    super()
+
     options = options || {}
     options.host = options.host || window.location.host
     options.pathname = options.pathname || '/websocket'
@@ -26,43 +34,39 @@ class WS {
     return openSocket(uri, options.timeout).then((socket) => {
       that.socket = socket
       that.socket.addEventListener("message", (event) => {
-        console.log(event)
+        const data = JSON.parse(event.data)
+        if (!('pong' in data)) {
+          that.dispatchEvent(new CustomEvent(WS.RECEIVE, {detail: data}))
+        }
       })
       that.socket.addEventListener("close", () => {
-        console.log("Websocket closed!")
-        that._connect(0).then(() => {
-          console.log("Websocket reconnected immediately!")
+        that.dispatchEvent(new CustomEvent(WS.DISCONNECT))
+        that.connect().then(() => {
+          that.dispatchEvent(new CustomEvent(WS.RECONNECT))
         }).catch(() => {
-          that._connect(that.options.retries -1).then(() => {
-            console.log("Websocket reconnected with trouble!")
-          }).catch(() => {
-            console.log("Websocket FATAL!")
-          })
+          that.dispatchEvent(new CustomEvent(WS.ERROR))
         })
       })
       const pingStrategy = attachPingStrategy(socket, options.pingInterval)
       pingStrategy.addEventListener("tick", (event) => {
-        console.log(event.detail)
+        that.dispatchEvent(new CustomEvent(WS.TICK, {detail: event.detail}))
       })
       return that
     }).catch((error) => {
       if (retriesLeft === 0) {
-        console.log("Failed connecting to websocket!")
         throw error
       } else {
         return new Promise((resolve, reject) => {
-          const delay = options.retryDelay
-          console.log(`Failed connecting to websocket! retrying in ${delay} milliseconds (${retriesLeft} retries left)`)
           setTimeout(() => {
             that._connect(retriesLeft -1).then(resolve, reject)
-          }, delay)
+          }, options.retryDelay)
         })
       }
     })
   }
 
-  send(payload) {
-    this.socket.send(payload)
+  send(data) {
+    this.socket.send(JSON.stringify(data))
   }
 }
 

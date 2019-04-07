@@ -34,7 +34,7 @@ defmodule Backend.SocketHandler do
       {:reply, {:text, pong_response}, state}
     else
       :ok = Logger.info("ws handle #{json}")
-      {:ok, state}
+      {:reply, {:text, json}, state}
     end
   end
 end
