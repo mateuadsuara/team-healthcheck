@@ -2,7 +2,7 @@ class WS {
   constructor(options) {
     options = options || {}
     options.host = options.host || window.location.host
-    options.pathname = options.pathname || '/ws'
+    options.pathname = options.pathname || '/websocket'
     options.protocol = options.protocol || window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     options.timeout = options.timeout || 5000
     options.pingInterval = options.pingInterval || 10000
