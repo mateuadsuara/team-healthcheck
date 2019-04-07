@@ -5,7 +5,7 @@ class WS {
     options.pathname = options.pathname || '/websocket'
     options.protocol = options.protocol || window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     options.timeout = options.timeout || 5000
-    options.pingInterval = options.pingInterval || 10000
+    options.pingInterval = options.pingInterval || 50000
     this.options = options
 
     this.socket = undefined
