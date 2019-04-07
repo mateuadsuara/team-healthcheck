@@ -26,7 +26,12 @@ class WS {
         console.log("CLOSE")
       })
       return attachPingStrategy(socket, options.pingInterval)
-        .then((pingEvents) => that)
+        .then((pingStrategy) => {
+            pingStrategy.addEventListener("tick", (event) => {
+              console.log(event.detail)
+            })
+            return that
+        })
     })
   }
 
@@ -42,6 +47,12 @@ function attachPingStrategy(socket, interval) {
     } else {
       const eventTarget = new EventTarget()
 
+      const tick = (data) => {
+        eventTarget.dispatchEvent(new CustomEvent("tick", {
+          detail: data
+        }))
+      }
+
       var ping
       ping = () => {
         if (socket.readyState !== WebSocket.OPEN) {
@@ -50,22 +61,22 @@ function attachPingStrategy(socket, interval) {
 
         const startTime = new Date().getTime()
         const id = startTime
-        var pongListener, pingTimeout
 
-        pongListener = (event) => {
+        var pingTimeout
+
+        const pongListener = (event) => {
           const data = JSON.parse(event.data)
           if (data.pong === id) {
             clearTimeout(pingTimeout)
+            socket.removeEventListener("message", pongListener)
             const endTime = new Date().getTime()
             const latency = endTime - startTime
-            const pongEvent = new Event("pong")
-            pongEvent.data = {
+            tick({
               ping: startTime,
               pong: endTime,
               latency: latency,
               interval: interval
-            }
-            eventTarget.dispatchEvent(pongEvent)
+            })
             setTimeout(ping, interval - latency)
           }
         }
@@ -76,13 +87,11 @@ function attachPingStrategy(socket, interval) {
         pingTimeout = setTimeout(() => {
           socket.removeEventListener("message", pongListener)
           const endTime = new Date().getTime()
-          const timeoutEvent = new Event("timeout")
-          timeoutEvent.data = {
+          tick({
             ping: startTime,
             timeout: endTime,
             interval: interval
-          }
-          eventTarget.dispatchEvent(timeoutEvent)
+          })
           ping()
         }, interval)
       }
