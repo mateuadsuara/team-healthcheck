@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css?family=Roboto+Mono" rel="stylesheet">
   <title>team-healthcheck</title>
   <script inline src="elm.min.js"></script>
+  <script inline src="ws.js"></script>
   <style>
     body {
       font-family: roboto mono;
@@ -40,24 +41,19 @@
       }
     })
 
-    const socket = new WebSocket("ws://localhost:9292/ws/chat")
-    socket.addEventListener("message", (event) => {
-      console.log(event)
-    })
-    socket.addEventListener("close", () => {
-      console.log("CLOSE")
-    })
-    setInterval(function () {
-      socket.send("ping")
-    }, 10000)
-
-    app.ports.websocketPort.subscribe(function (string) {
-      const payload = JSON.stringify({
-        data: string
+    const ws = new WS()
+    ws.connect().then(function(socket) {
+      console.log("connected")
+      app.ports.websocketPort.subscribe(function (string) {
+        const payload = JSON.stringify({
+          data: string
+        })
+        socket.send(payload)
       })
-      console.log(payload)
-      socket.send(payload)
+    }).catch(function(error) {
+      console.log(error)
     })
+
   </script>
 </body>
 </html>

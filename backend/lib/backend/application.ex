@@ -17,7 +17,7 @@ defmodule Backend.Application do
         dispatch: [
           {:_,
             [
-              {"/ws/[...]", Backend.SocketHandler, []},
+              {"/ws", Backend.SocketHandler, []},
               {:_, Plug.Cowboy.Handler, {Backend.Router, []}}
             ]
           }
