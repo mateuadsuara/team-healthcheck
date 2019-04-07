@@ -124,7 +124,7 @@ type Message
     | SetPage Page
     | SaveUsername Username
     | CompletedUsername
-    | WebsocketSend String
+    | WebsocketSend
 
 
 main : Program Flags Model Message
@@ -241,7 +241,7 @@ viewWebsocket : Model -> Html Message
 viewWebsocket model =
     Html.form [ class "tc ph3" ]
         [ p [] [ text "Websocket!👋😃" ]
-        , input [ type_ "text", class "", placeholder "String", onInput WebsocketSend, value "" ] []
+        , input [ type_ "button", class "", onClick WebsocketSend, value "" ] []
         ]
 
 
@@ -420,8 +420,8 @@ update msg model =
         CompletedUsername ->
             ( { model | currentPage = PointsOfView }, Cmd.none )
 
-        WebsocketSend string ->
-            ( model, websocketPort string )
+        WebsocketSend ->
+            ( model, websocketPort "foo" )
 
 
 updateGraphState : HttpResult -> Model -> GraphState

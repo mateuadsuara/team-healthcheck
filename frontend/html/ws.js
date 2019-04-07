@@ -5,12 +5,15 @@ class WS {
 
   connect(options) {
     options = options || {}
+    options.host = options.host || window.location.host
+    options.pathname = options.pathname || '/ws'
     options.timeout = options.timeout || 5000
     options.pingInterval = options.pingInterval || 10000
+    const uri = `ws://${options.host}${options.pathname}`
 
     const that = this
 
-    return openSocket("ws://localhost:9292/ws", options.timeout).then((socket) => {
+    return openSocket(uri, options.timeout).then((socket) => {
       that.socket = socket
       that.socket.addEventListener("message", (event) => {
         console.log(event)
