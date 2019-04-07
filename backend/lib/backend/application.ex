@@ -8,23 +8,37 @@ defmodule Backend.Application do
 
   def start(_type, _args) do
     port = 9292
+    default_options = [
+      port: port,
+      dispatch: [
+        {:_,
+          [
+            {"/ws", Backend.SocketHandler, []},
+            {:_, Plug.Cowboy.Handler, {Backend.Router, []}}
+          ]
+        }
+      ]
+    ]
+
+    cert_dir = System.get_env("CERT_DIR")
+    scheme = if cert_dir do
+      :https
+    else
+      :http
+    end
+    options = if cert_dir do
+      default_options ++ [
+        keyfile: "#{cert_dir}/key.pem",
+        certfile: "#{cert_dir}/cert.pem",
+      ]
+    else
+      default_options
+    end
 
     # List all child processes to be supervised
     children = [
       # Starts a server by calling: Backend.Router.start_link(...)
-      {Plug.Cowboy, scheme: :https, plug: Backend.Router, options: [
-        port: port,
-        keyfile: "/vagrant/cert_key/key.pem",
-        certfile: "/vagrant/cert_key/cert.pem",
-        dispatch: [
-          {:_,
-            [
-              {"/ws", Backend.SocketHandler, []},
-              {:_, Plug.Cowboy.Handler, {Backend.Router, []}}
-            ]
-          }
-        ]
-      ]},
+      {Plug.Cowboy, scheme: scheme, plug: Backend.Router, options: options},
       {PerspectivesServer, name: PerspectivesServer}
     ]
 

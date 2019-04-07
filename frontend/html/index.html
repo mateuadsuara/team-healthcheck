@@ -41,7 +41,7 @@
       }
     })
 
-    const ws = new WS()
+    const ws = new WS({pathname: '/ws'})
     ws.connect().then(function(socket) {
       console.log("connected")
       app.ports.websocketPort.subscribe(function (string) {

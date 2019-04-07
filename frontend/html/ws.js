@@ -1,17 +1,21 @@
 class WS {
-  constructor() {
-    this.socket = undefined
-  }
-
-  connect(options) {
+  constructor(options) {
     options = options || {}
     options.host = options.host || window.location.host
     options.pathname = options.pathname || '/ws'
+    options.protocol = options.protocol || window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     options.timeout = options.timeout || 5000
     options.pingInterval = options.pingInterval || 10000
-    const uri = `wss://${options.host}${options.pathname}`
+    this.options = options
 
+    this.socket = undefined
+  }
+
+  connect() {
     const that = this
+
+    const options = that.options
+    const uri = `${options.protocol}//${options.host}${options.pathname}`
 
     return openSocket(uri, options.timeout).then((socket) => {
       that.socket = socket
