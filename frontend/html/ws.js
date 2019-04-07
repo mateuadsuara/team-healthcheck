@@ -25,13 +25,17 @@ class WS extends EventTarget {
     return this._connect(this.options.retries)
   }
 
+  send(data) {
+    this.socket.send(JSON.stringify(data))
+  }
+
   _connect(retriesLeft) {
     const that = this
 
     const options = that.options
     const uri = `${options.protocol}//${options.host}${options.pathname}`
 
-    return openSocket(uri, options.timeout).then((socket) => {
+    return that._openSocket(uri, options.timeout).then((socket) => {
       that.socket = socket
       that.socket.addEventListener("message", (event) => {
         const data = JSON.parse(event.data)
@@ -47,7 +51,7 @@ class WS extends EventTarget {
           that.dispatchEvent(new CustomEvent(WS.ERROR))
         })
       })
-      const pingStrategy = attachPingStrategy(socket, options.pingInterval)
+      const pingStrategy = that._attachPingStrategy(socket, options.pingInterval)
       pingStrategy.addEventListener("tick", (event) => {
         that.dispatchEvent(new CustomEvent(WS.TICK, {detail: event.detail}))
       })
@@ -65,89 +69,84 @@ class WS extends EventTarget {
     })
   }
 
-  send(data) {
-    this.socket.send(JSON.stringify(data))
+  _openSocket(path, timeout) {
+    return new Promise((resolve, reject) => {
+      const socket = new WebSocket(path)
+
+      var readyIntervalCheckId
+
+      const connectionTimeoutId = setTimeout(() => {
+        clearInterval(readyIntervalCheckId)
+        reject(new Error("Connection timeout"))
+      }, timeout)
+
+      readyIntervalCheckId = setInterval(() => {
+        if (socket.readyState === WebSocket.OPEN) {
+          clearTimeout(connectionTimeoutId)
+          clearInterval(readyIntervalCheckId)
+          resolve(socket)
+        } else if (socket.readyState !== WebSocket.CONNECTING) {
+          clearTimeout(connectionTimeoutId)
+          clearInterval(readyIntervalCheckId)
+          reject(new Error("The socket got into an unexpected state: " + socket.readyState))
+        }
+      }, 10)
+    })
   }
-}
 
-function attachPingStrategy(socket, interval) {
-  const eventTarget = new EventTarget()
+  _attachPingStrategy(socket, interval) {
+    const eventTarget = new EventTarget()
 
-  const tick = (data) => {
-    eventTarget.dispatchEvent(new CustomEvent("tick", {
-      detail: data
-    }))
-  }
-
-  var ping
-  ping = () => {
-    if (socket.readyState !== WebSocket.OPEN) {
-      return
+    const tick = (data) => {
+      eventTarget.dispatchEvent(new CustomEvent("tick", {
+        detail: data
+      }))
     }
 
-    const startTime = new Date().getTime()
-    const id = startTime
+    var ping
+    ping = () => {
+      if (socket.readyState !== WebSocket.OPEN) {
+        return
+      }
 
-    var pingTimeout
+      const startTime = new Date().getTime()
+      const id = startTime
 
-    const pongListener = (event) => {
-      const data = JSON.parse(event.data)
-      if (data.pong === id) {
-        clearTimeout(pingTimeout)
+      var pingTimeout
+
+      const pongListener = (event) => {
+        const data = JSON.parse(event.data)
+        if (data.pong === id) {
+          clearTimeout(pingTimeout)
+          socket.removeEventListener("message", pongListener)
+          const endTime = new Date().getTime()
+          const latency = endTime - startTime
+          tick({
+            ping: startTime,
+            pong: endTime,
+            latency: latency,
+            interval: interval
+          })
+          setTimeout(ping, interval - latency)
+        }
+      }
+      socket.addEventListener("message", pongListener)
+
+      socket.send(JSON.stringify({ping: id}))
+
+      pingTimeout = setTimeout(() => {
         socket.removeEventListener("message", pongListener)
         const endTime = new Date().getTime()
-        const latency = endTime - startTime
         tick({
           ping: startTime,
-          pong: endTime,
-          latency: latency,
+          timeout: endTime,
           interval: interval
         })
-        setTimeout(ping, interval - latency)
-      }
+        ping()
+      }, interval)
     }
-    socket.addEventListener("message", pongListener)
+    ping()
 
-    socket.send(JSON.stringify({ping: id}))
-
-    pingTimeout = setTimeout(() => {
-      socket.removeEventListener("message", pongListener)
-      const endTime = new Date().getTime()
-      tick({
-        ping: startTime,
-        timeout: endTime,
-        interval: interval
-      })
-      ping()
-    }, interval)
+    return eventTarget
   }
-  ping()
-
-  return eventTarget
 }
-
-function openSocket(path, timeout) {
-  return new Promise((resolve, reject) => {
-    const socket = new WebSocket(path)
-
-    var readyIntervalCheckId
-
-    const connectionTimeoutId = setTimeout(() => {
-      clearInterval(readyIntervalCheckId)
-      reject(new Error("Connection timeout"))
-    }, timeout)
-
-    readyIntervalCheckId = setInterval(() => {
-      if (socket.readyState === WebSocket.OPEN) {
-        clearTimeout(connectionTimeoutId)
-        clearInterval(readyIntervalCheckId)
-        resolve(socket)
-      } else if (socket.readyState !== WebSocket.CONNECTING) {
-        clearTimeout(connectionTimeoutId)
-        clearInterval(readyIntervalCheckId)
-        reject(new Error("The socket got into an unexpected state: " + socket.readyState))
-      }
-    }, 10)
-  })
-}
-
