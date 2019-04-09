@@ -34,7 +34,7 @@ defmodule Backend.Router do
 
     broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
 
-    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
+    send_resp(conn |> put_resp_header("location", "/"), 302, Poison.encode!(res))
   end
 
   post "/add_metric" do
@@ -47,7 +47,7 @@ defmodule Backend.Router do
 
     broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
 
-    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
+    send_resp(conn |> put_resp_header("location", "/"), 302, Poison.encode!(res))
   end
 
   post "/register_point_of_view" do
@@ -66,7 +66,7 @@ defmodule Backend.Router do
 
     broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
 
-    send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
+    send_resp(conn |> put_resp_header("location", "/"), 302, Poison.encode!(res))
   end
 
   match _ do
