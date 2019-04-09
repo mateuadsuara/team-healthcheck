@@ -31,6 +31,9 @@ defmodule Backend.Router do
     {res, _} = serialised_json
                |> Poison.decode!(%{keys: :atoms!})
                |> PerspectivesServer.deserialise
+
+    broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
+
     send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
@@ -41,6 +44,9 @@ defmodule Backend.Router do
       name: name,
       criteria: criteria
     })
+
+    broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
+
     send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
@@ -57,10 +63,23 @@ defmodule Backend.Router do
       health: health,
       slope: slope
     })
+
+    broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
+
     send_resp(conn |> put_resp_header("Location", "/"), 302, Poison.encode!(res))
   end
 
   match _ do
     send_resp(conn, 404, "Oops!")
+  end
+
+  def broadcast_ws(data) do
+    json = Poison.encode!(data)
+    Registry.SocketHandler
+    |> Registry.dispatch("/ws", fn(entries) ->
+      for {pid, _} <- entries do
+        Process.send(pid, {:text, json}, [])
+      end
+    end)
   end
 end

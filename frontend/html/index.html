@@ -44,10 +44,13 @@
     new WS({pathname: '/ws'}).connect().then(function(ws) {
       console.log("Websocket connected!")
       ws.addEventListener(WS.TICK, (event) => {
-        console.log(event.detail)
+        //console.log(event.detail)
       })
       ws.addEventListener(WS.RECEIVE, (event) => {
-        console.log(event.detail)
+        const message = event.detail
+        if (message.updatedGraph) {
+          app.ports.updatedGraph.send(message.updatedGraph)
+        }
       })
       ws.addEventListener(WS.DISCONNECT, () => {
         console.log("Websocket disconnected!")

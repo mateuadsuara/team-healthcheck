@@ -39,7 +39,8 @@ defmodule Backend.Application do
     children = [
       # Starts a server by calling: Backend.Router.start_link(...)
       {Plug.Cowboy, scheme: scheme, plug: Backend.Router, options: options},
-      {PerspectivesServer, name: PerspectivesServer}
+      {PerspectivesServer, name: PerspectivesServer},
+      Registry.child_spec(keys: :duplicate, name: Registry.SocketHandler)
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

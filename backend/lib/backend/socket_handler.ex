@@ -4,25 +4,18 @@ defmodule Backend.SocketHandler do
   require Logger
 
   def init(request, _state) do
-    :ok = Logger.info("init")
-
-    state = %{
-      registry_key: request.path,
-      peer: request.peer
-    }
-
+    state = %{}
     {:cowboy_websocket, request, state}
   end
 
   def websocket_init(state) do
-    :ok = Logger.info("ws init")
+    {:ok, _} = Registry.SocketHandler
+               |> Registry.register("/ws", {})
 
     {:ok, state}
   end
 
-  def websocket_info(info, state) do
-    :ok = Logger.info("ws info")
-
+  def websocket_info({:text, info}, state) do
     {:reply, {:text, info}, state}
   end
 
@@ -33,8 +26,7 @@ defmodule Backend.SocketHandler do
       pong_response = Poison.encode!(%{pong: id})
       {:reply, {:text, pong_response}, state}
     else
-      :ok = Logger.info("ws handle #{json}")
-      {:reply, {:text, json}, state}
+      {:ok, state}
     end
   end
 end

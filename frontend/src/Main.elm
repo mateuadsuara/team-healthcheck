@@ -12,6 +12,9 @@ import Time
 port saveUsername : Username -> Cmd msg
 
 
+port updatedGraph : (Graph -> msg) -> Sub msg
+
+
 port websocketPort : String -> Cmd msg
 
 
@@ -125,6 +128,7 @@ type Message
     | SaveUsername Username
     | CompletedUsername
     | WebsocketSend
+    | UpdatedGraph Graph
 
 
 main : Program Flags Model Message
@@ -404,6 +408,9 @@ update msg model =
         GotGraph result ->
             ( { model | graphState = updateGraphState result model }, Cmd.none )
 
+        UpdatedGraph graph ->
+            ( { model | graphState = Loaded { graph = graph } }, Cmd.none )
+
         SetPage page ->
             ( { model | currentPage = page }, Cmd.none )
 
@@ -441,4 +448,6 @@ updateGraphState result model =
 
 subscriptions : Model -> Sub Message
 subscriptions model =
-    Sub.none
+    Sub.batch
+        [ updatedGraph UpdatedGraph
+        ]
