@@ -15,8 +15,8 @@ defmodule Backend.SocketHandler do
     {:ok, state}
   end
 
-  def websocket_info({:text, info}, state) do
-    {:reply, {:text, info}, state}
+  def websocket_info({:text, json}, state) do
+    {:reply, {:text, json}, state}
   end
 
   def websocket_handle({:text, json}, state) do
