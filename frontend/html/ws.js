@@ -15,7 +15,7 @@ class WS extends EventTarget {
     options.retries = options.retries || 60
     options.retryDelay = options.retryDelay || 1000
     options.timeout = options.timeout || 5000
-    options.pingInterval = options.pingInterval || 50000
+    options.pingInterval = options.pingInterval || 25000
     this.options = options
 
     this.socket = undefined
