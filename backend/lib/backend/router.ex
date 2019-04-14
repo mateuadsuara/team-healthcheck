@@ -18,9 +18,20 @@ defmodule Backend.Router do
   end
 
   get "/snapshot" do
-    snapshot = %{graph: PerspectivesServer.graph}
-               |> Map.merge(ClientsCoordinationServer.get_state)
+    snapshot = %{
+      graph: PerspectivesServer.graph,
+      coordination: ClientsCoordinationServer.state
+    }
     send_resp(conn, 200, Poison.encode!(snapshot))
+  end
+
+  post "/set_active_metric" do
+    active_metric = conn.params["active_metric"]
+    ClientsCoordinationServer.set_active_metric(active_metric)
+
+    broadcast_ws(%{updatedCoordination: ClientsCoordinationServer.state})
+
+    send_resp(conn |> put_resp_header("location", "/"), 302, "")
   end
 
   get "/serialise" do

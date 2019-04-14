@@ -51,7 +51,7 @@
       ws.onReceive((message) => {
         [
           "updatedGraph",
-          "changedActiveMetric"
+          "updatedCoordination"
         ].forEach((incomingEvent) => {
           const eventData = message[incomingEvent]
           if (eventData) {

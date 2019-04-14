@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import Json.Decode exposing (Decoder, at, decodeString, int, list, map2, map3, map4, string)
+import Json.Decode exposing (Decoder, at, decodeString, int, list, map, map2, map3, map4, nullable, string)
 import Time
 
 
@@ -13,6 +13,9 @@ port saveUsername : Username -> Cmd msg
 
 
 port updatedGraph : (Graph -> msg) -> Sub msg
+
+
+port updatedCoordination : (Coordination -> msg) -> Sub msg
 
 
 type alias Range =
@@ -72,9 +75,20 @@ graphDecoder =
     list metricDecoder
 
 
+type alias Coordination =
+    { activeMetric : Maybe MetricName
+    }
+
+
+coordinationDecoder : Decoder Coordination
+coordinationDecoder =
+    map Coordination
+        (at [ "active_metric" ] (nullable string))
+
+
 type alias Snapshot =
     { graph : Graph
-    , activeMetric : MetricName
+    , coordination : Coordination
     }
 
 
@@ -82,7 +96,7 @@ snapshotDecoder : Decoder Snapshot
 snapshotDecoder =
     map2 Snapshot
         (at [ "graph" ] graphDecoder)
-        (at [ "active_metric" ] string)
+        (at [ "coordination" ] coordinationDecoder)
 
 
 type alias StartDate =
@@ -135,8 +149,9 @@ type Message
     = GotSnapshot HttpResult
     | SetPage Page
     | SaveUsername Username
-    | CompletedUsername
+    | CompleteUsername
     | UpdatedGraph Graph
+    | UpdatedCoordination Coordination
 
 
 main : Program Flags Model Message
@@ -248,7 +263,7 @@ viewUsername model =
         username =
             Maybe.withDefault "" model.flags.username
     in
-    Html.form [ class "tc ph3", onSubmit CompletedUsername ]
+    Html.form [ class "tc ph3", onSubmit CompleteUsername ]
         [ p [] [ text "Hi!👋😃" ]
         , p [] [ text "Welcome to the team healthcheck!" ]
         , p [] [ text "What's your name?" ]
@@ -402,15 +417,10 @@ update msg model =
             ( { model | snapshotState = updateSnapshotState result model }, Cmd.none )
 
         UpdatedGraph graph ->
-            case model.snapshotState of
-                Loading ->
-                    ( model, Cmd.none )
+            ( { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | graph = graph }) }, Cmd.none )
 
-                Failed _ ->
-                    ( model, Cmd.none )
-
-                Loaded snapshot ->
-                    ( { model | snapshotState = Loaded { snapshot | graph = graph } }, Cmd.none )
+        UpdatedCoordination coordination ->
+            ( { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | coordination = coordination }) }, Cmd.none )
 
         SetPage page ->
             ( { model | currentPage = page }, Cmd.none )
@@ -425,8 +435,21 @@ update msg model =
             in
             ( { model | flags = updatedFlags }, saveUsername username )
 
-        CompletedUsername ->
+        CompleteUsername ->
             ( { model | currentPage = PointsOfView }, Cmd.none )
+
+
+mapSnapshot : SnapshotState -> (Snapshot -> Snapshot) -> SnapshotState
+mapSnapshot snapshotState updateFn =
+    case snapshotState of
+        Loading ->
+            snapshotState
+
+        Failed _ ->
+            snapshotState
+
+        Loaded snapshot ->
+            Loaded <| updateFn snapshot
 
 
 updateSnapshotState : HttpResult -> Model -> SnapshotState
@@ -448,4 +471,5 @@ subscriptions : Model -> Sub Message
 subscriptions model =
     Sub.batch
         [ updatedGraph UpdatedGraph
+        , updatedCoordination UpdatedCoordination
         ]

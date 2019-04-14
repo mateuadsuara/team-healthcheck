@@ -1,7 +1,7 @@
 defmodule ClientsCoordinationServer do
   use GenServer
 
-  def get_state() do
+  def state() do
     GenServer.call(this(), :get_state)
   end
 
@@ -18,7 +18,7 @@ defmodule ClientsCoordinationServer do
   end
 
   def init(:init) do
-    initial_state = %{active_metric: ""}
+    initial_state = %{active_metric: nil}
     {:ok, initial_state}
   end
 
