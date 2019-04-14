@@ -42,7 +42,7 @@
     })
 
     new WS({pathname: '/ws'}).connect().then(function(ws) {
-      console.log("Websocket connected!")
+      app.ports.updatedWebsocket.send("connected")
 
       ws.onTick((info) => {
         //console.log(info)
@@ -61,17 +61,18 @@
       })
 
       ws.onDisconnect(() => {
-        console.log("Websocket disconnected!")
+        app.ports.updatedWebsocket.send("disconnected")
       })
 
       ws.onReconnect(() => {
-        console.log("Websocket reconnected!")
+        app.ports.updatedWebsocket.send("reconnected")
       })
 
       ws.onError(() => {
-        console.log("Websocket ERROR!")
+        app.ports.updatedWebsocket.send("error")
       })
     }).catch(function(error) {
+      app.ports.updatedWebsocket.send("error")
       console.error(error)
     })
 

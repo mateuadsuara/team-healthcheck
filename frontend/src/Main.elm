@@ -18,6 +18,9 @@ port updatedGraph : (Graph -> msg) -> Sub msg
 port updatedCoordination : (Coordination -> msg) -> Sub msg
 
 
+port updatedWebsocket : (String -> msg) -> Sub msg
+
+
 type alias Range =
     Int
 
@@ -123,6 +126,13 @@ type SnapshotState
     | Loaded Snapshot
 
 
+type WebsocketState
+    = Connecting
+    | Connected
+    | Disconnected
+    | Error
+
+
 type Page
     = PointsOfView
     | Metrics
@@ -133,6 +143,7 @@ type Page
 type alias Model =
     { flags : Flags
     , snapshotState : SnapshotState
+    , websocketState : WebsocketState
     , currentPage : Page
     }
 
@@ -147,6 +158,7 @@ type alias Username =
 
 type Message
     = GotSnapshot HttpResult
+    | UpdatedWebsocket String
     | SetPage Page
     | SaveUsername Username
     | CompleteUsername
@@ -173,6 +185,7 @@ init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
       , snapshotState = Loading
+      , websocketState = Connecting
       , currentPage =
             if flags.username == Nothing then
                 Username
@@ -188,7 +201,7 @@ init flags =
 
 
 view : Model -> Html Message
-view ({ snapshotState, flags, currentPage } as model) =
+view ({ snapshotState, websocketState, flags, currentPage } as model) =
     case snapshotState of
         Loading ->
             text "Loading..."
@@ -200,36 +213,47 @@ view ({ snapshotState, flags, currentPage } as model) =
             text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
         Loaded snapshot ->
-            case currentPage of
-                Username ->
-                    viewUsername model
+            case websocketState of
+                Connecting ->
+                    text "Connecting websocket..."
 
-                DataManagement ->
-                    div []
-                        [ viewNavigationLinks model
-                        , div [ class "ph3" ]
-                            [ h1 [] [ text "View data:" ]
-                            , viewGraph snapshot.graph
-                            , h1 [] [ text "Manage data:" ]
-                            , text "Warning: the format of this data is subject to change in the future."
-                            , h4 [] [ text "Export:" ]
-                            , viewExportLink
-                            , h4 [] [ text "Restore:" ]
-                            , viewRestoreForm
-                            ]
-                        ]
+                Error ->
+                    text "Failed websocket! :( Check your connection and try reloading"
 
-                Metrics ->
-                    div []
-                        [ viewNavigationLinks model
-                        , div [ class "ph3" ] [ viewMetricForm ]
-                        ]
+                Disconnected ->
+                    text "You got disconnected! :( I am trying to reconnect..."
 
-                PointsOfView ->
-                    div []
-                        [ viewNavigationLinks model
-                        , div [ class "ph3" ] [ viewPointOfViewForm snapshot.graph flags.startDate (getUsername model) ]
-                        ]
+                Connected ->
+                    case currentPage of
+                        Username ->
+                            viewUsername model
+
+                        DataManagement ->
+                            div []
+                                [ viewNavigationLinks model
+                                , div [ class "ph3" ]
+                                    [ h1 [] [ text "View data:" ]
+                                    , viewGraph snapshot.graph
+                                    , h1 [] [ text "Manage data:" ]
+                                    , text "Warning: the format of this data is subject to change in the future."
+                                    , h4 [] [ text "Export:" ]
+                                    , viewExportLink
+                                    , h4 [] [ text "Restore:" ]
+                                    , viewRestoreForm
+                                    ]
+                                ]
+
+                        Metrics ->
+                            div []
+                                [ viewNavigationLinks model
+                                , div [ class "ph3" ] [ viewMetricForm ]
+                                ]
+
+                        PointsOfView ->
+                            div []
+                                [ viewNavigationLinks model
+                                , div [ class "ph3" ] [ viewPointOfViewForm snapshot.graph flags.startDate (getUsername model) ]
+                                ]
 
 
 pageColor : Model -> Page -> String
@@ -416,6 +440,14 @@ update msg model =
         GotSnapshot result ->
             ( { model | snapshotState = updateSnapshotState result model }, Cmd.none )
 
+        UpdatedWebsocket stateString ->
+            case parseWebsocketState stateString of
+                Just state ->
+                    ( { model | websocketState = state }, Cmd.none )
+
+                Nothing ->
+                    ( model, Cmd.none )
+
         UpdatedGraph graph ->
             ( { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | graph = graph }) }, Cmd.none )
 
@@ -467,9 +499,29 @@ updateSnapshotState result model =
             Failed ConnectionProblem
 
 
+parseWebsocketState : String -> Maybe WebsocketState
+parseWebsocketState stateString =
+    case stateString of
+        "connected" ->
+            Just Connected
+
+        "disconnected" ->
+            Just Disconnected
+
+        "reconnected" ->
+            Just Connected
+
+        "error" ->
+            Just Error
+
+        _ ->
+            Nothing
+
+
 subscriptions : Model -> Sub Message
 subscriptions model =
     Sub.batch
         [ updatedGraph UpdatedGraph
         , updatedCoordination UpdatedCoordination
+        , updatedWebsocket UpdatedWebsocket
         ]
