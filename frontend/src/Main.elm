@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http
-import Json.Decode exposing (Decoder, at, decodeString, int, list, map3, map4, string)
+import Json.Decode exposing (Decoder, at, decodeString, int, list, map2, map3, map4, string)
 import Time
 
 
@@ -13,9 +13,6 @@ port saveUsername : Username -> Cmd msg
 
 
 port updatedGraph : (Graph -> msg) -> Sub msg
-
-
-port websocketPort : String -> Cmd msg
 
 
 type alias Range =
@@ -75,6 +72,19 @@ graphDecoder =
     list metricDecoder
 
 
+type alias Snapshot =
+    { graph : Graph
+    , activeMetric : MetricName
+    }
+
+
+snapshotDecoder : Decoder Snapshot
+snapshotDecoder =
+    map2 Snapshot
+        (at [ "graph" ] graphDecoder)
+        (at [ "active_metric" ] string)
+
+
 type alias StartDate =
     { year : Int
     , month : Int
@@ -93,23 +103,22 @@ type LoadError
     | MalformedPayload
 
 
-type GraphState
+type SnapshotState
     = Loading
     | Failed LoadError
-    | Loaded { graph : Graph }
+    | Loaded Snapshot
 
 
 type Page
     = PointsOfView
     | Metrics
     | DataManagement
-    | Websocket
     | Username
 
 
 type alias Model =
     { flags : Flags
-    , graphState : GraphState
+    , snapshotState : SnapshotState
     , currentPage : Page
     }
 
@@ -123,11 +132,10 @@ type alias Username =
 
 
 type Message
-    = GotGraph HttpResult
+    = GotSnapshot HttpResult
     | SetPage Page
     | SaveUsername Username
     | CompletedUsername
-    | WebsocketSend
     | UpdatedGraph Graph
 
 
@@ -143,13 +151,13 @@ main =
 
 initialPage : Page
 initialPage =
-    Websocket
+    DataManagement
 
 
 init : Flags -> ( Model, Cmd Message )
 init flags =
     ( { flags = flags
-      , graphState = Loading
+      , snapshotState = Loading
       , currentPage =
             if flags.username == Nothing then
                 Username
@@ -158,15 +166,15 @@ init flags =
                 initialPage
       }
     , Http.get
-        { url = "/graph"
-        , expect = Http.expectString GotGraph
+        { url = "/snapshot"
+        , expect = Http.expectString GotSnapshot
         }
     )
 
 
 view : Model -> Html Message
-view ({ graphState, flags, currentPage } as model) =
-    case graphState of
+view ({ snapshotState, flags, currentPage } as model) =
+    case snapshotState of
         Loading ->
             text "Loading..."
 
@@ -176,7 +184,7 @@ view ({ graphState, flags, currentPage } as model) =
         Failed MalformedPayload ->
             text "Oops, we got a problem with the data we received. We need to fix this. Sorry for the inconvenience."
 
-        Loaded { graph } ->
+        Loaded snapshot ->
             case currentPage of
                 Username ->
                     viewUsername model
@@ -186,7 +194,7 @@ view ({ graphState, flags, currentPage } as model) =
                         [ viewNavigationLinks model
                         , div [ class "ph3" ]
                             [ h1 [] [ text "View data:" ]
-                            , viewGraph graph
+                            , viewGraph snapshot.graph
                             , h1 [] [ text "Manage data:" ]
                             , text "Warning: the format of this data is subject to change in the future."
                             , h4 [] [ text "Export:" ]
@@ -205,13 +213,7 @@ view ({ graphState, flags, currentPage } as model) =
                 PointsOfView ->
                     div []
                         [ viewNavigationLinks model
-                        , div [ class "ph3" ] [ viewPointOfViewForm graph flags.startDate (getUsername model) ]
-                        ]
-
-                Websocket ->
-                    div []
-                        [ viewNavigationLinks model
-                        , div [ class "ph3" ] [ viewWebsocket model ]
+                        , div [ class "ph3" ] [ viewPointOfViewForm snapshot.graph flags.startDate (getUsername model) ]
                         ]
 
 
@@ -235,17 +237,8 @@ viewNavigationLinks model =
             [ a [ onClick (SetPage PointsOfView), classesForPage PointsOfView ] [ text "Points of view" ]
             , a [ onClick (SetPage Metrics), classesForPage Metrics ] [ text "Metrics" ]
             , a [ onClick (SetPage DataManagement), classesForPage DataManagement ] [ text "DataManagement" ]
-            , a [ onClick (SetPage Websocket), classesForPage Websocket ] [ text "Websocket" ]
             ]
         , a [ onClick (SetPage Username), class "pointer hover-light-blue" ] [ text <| getUsername model ]
-        ]
-
-
-viewWebsocket : Model -> Html Message
-viewWebsocket model =
-    Html.form [ class "tc ph3" ]
-        [ p [] [ text "Websocket!👋😃" ]
-        , input [ type_ "button", class "", onClick WebsocketSend, value "" ] []
         ]
 
 
@@ -405,11 +398,19 @@ viewDropdown attrs optionFn options =
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
     case msg of
-        GotGraph result ->
-            ( { model | graphState = updateGraphState result model }, Cmd.none )
+        GotSnapshot result ->
+            ( { model | snapshotState = updateSnapshotState result model }, Cmd.none )
 
         UpdatedGraph graph ->
-            ( { model | graphState = Loaded { graph = graph } }, Cmd.none )
+            case model.snapshotState of
+                Loading ->
+                    ( model, Cmd.none )
+
+                Failed _ ->
+                    ( model, Cmd.none )
+
+                Loaded snapshot ->
+                    ( { model | snapshotState = Loaded { snapshot | graph = graph } }, Cmd.none )
 
         SetPage page ->
             ( { model | currentPage = page }, Cmd.none )
@@ -427,17 +428,14 @@ update msg model =
         CompletedUsername ->
             ( { model | currentPage = PointsOfView }, Cmd.none )
 
-        WebsocketSend ->
-            ( model, websocketPort "foo" )
 
-
-updateGraphState : HttpResult -> Model -> GraphState
-updateGraphState result model =
+updateSnapshotState : HttpResult -> Model -> SnapshotState
+updateSnapshotState result model =
     case result of
         Ok json ->
-            case decodeString graphDecoder json of
-                Ok graph ->
-                    Loaded { graph = graph }
+            case decodeString snapshotDecoder json of
+                Ok snapshot ->
+                    Loaded snapshot
 
                 Err _ ->
                     Failed MalformedPayload

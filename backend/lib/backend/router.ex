@@ -17,8 +17,10 @@ defmodule Backend.Router do
     send_resp(conn, 200, @favicon)
   end
 
-  get "/graph" do
-    send_resp(conn, 200, Poison.encode!(PerspectivesServer.graph))
+  get "/snapshot" do
+    snapshot = %{graph: PerspectivesServer.graph}
+               |> Map.merge(ClientsCoordinationServer.get_state)
+    send_resp(conn, 200, Poison.encode!(snapshot))
   end
 
   get "/serialise" do
@@ -76,7 +78,7 @@ defmodule Backend.Router do
   def broadcast_ws(data) do
     json = Poison.encode!(data)
     Registry.SocketHandler
-    |> Registry.dispatch("/ws", fn(entries) ->
+    |> Registry.dispatch("broadcast", fn(entries) ->
       for {pid, _} <- entries do
         Process.send(pid, {:text, json}, [])
       end

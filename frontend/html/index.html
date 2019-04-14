@@ -48,11 +48,11 @@
         //console.log(info)
       })
 
-      const WS_INCOMING_EVENTS = [
-        "updatedGraph", "changedActiveMetric"
-      ]
       ws.onReceive((message) => {
-        WS_INCOMING_EVENTS.forEach((incomingEvent) => {
+        [
+          "updatedGraph",
+          "changedActiveMetric"
+        ].forEach((incomingEvent) => {
           const eventData = message[incomingEvent]
           if (eventData) {
             app.ports[incomingEvent].send(eventData)
@@ -70,10 +70,6 @@
 
       ws.onError(() => {
         console.log("Websocket ERROR!")
-      })
-
-      app.ports.websocketPort.subscribe(function (string) {
-        ws.send({data: string})
       })
     }).catch(function(error) {
       console.error(error)

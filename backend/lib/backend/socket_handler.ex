@@ -10,7 +10,7 @@ defmodule Backend.SocketHandler do
 
   def websocket_init(state) do
     {:ok, _} = Registry.SocketHandler
-               |> Registry.register("/ws", {})
+               |> Registry.register("broadcast", {})
 
     {:ok, state}
   end
