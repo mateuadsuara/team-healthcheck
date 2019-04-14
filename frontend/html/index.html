@@ -43,29 +43,40 @@
 
     new WS({pathname: '/ws'}).connect().then(function(ws) {
       console.log("Websocket connected!")
-      ws.addEventListener(WS.TICK, (event) => {
-        //console.log(event.detail)
+
+      ws.onTick((info) => {
+        //console.log(info)
       })
-      ws.addEventListener(WS.RECEIVE, (event) => {
-        const message = event.detail
-        if (message.updatedGraph) {
-          app.ports.updatedGraph.send(message.updatedGraph)
-        }
+
+      const WS_INCOMING_EVENTS = [
+        "updatedGraph", "changedActiveMetric"
+      ]
+      ws.onReceive((message) => {
+        WS_INCOMING_EVENTS.forEach((incomingEvent) => {
+          const eventData = message[incomingEvent]
+          if (eventData) {
+            app.ports[incomingEvent].send(eventData)
+          }
+        })
       })
-      ws.addEventListener(WS.DISCONNECT, () => {
+
+      ws.onDisconnect(() => {
         console.log("Websocket disconnected!")
       })
-      ws.addEventListener(WS.RECONNECT, () => {
+
+      ws.onReconnect(() => {
         console.log("Websocket reconnected!")
       })
-      ws.addEventListener(WS.ERROR, () => {
+
+      ws.onError(() => {
         console.log("Websocket ERROR!")
       })
+
       app.ports.websocketPort.subscribe(function (string) {
         ws.send({data: string})
       })
     }).catch(function(error) {
-      console.log(error)
+      console.error(error)
     })
 
   </script>

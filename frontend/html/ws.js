@@ -1,13 +1,5 @@
-class WS extends EventTarget {
-  static get TICK() { return "tick" }
-  static get RECEIVE() { return "receive" }
-  static get DISCONNECT() { return "disconnect" }
-  static get RECONNECT() { return "reconnect" }
-  static get ERROR() { return "error" }
-
+class WS {
   constructor(options) {
-    super()
-
     options = options || {}
     options.host = options.host || window.location.host
     options.pathname = options.pathname || '/websocket'
@@ -19,6 +11,13 @@ class WS extends EventTarget {
     this.options = options
 
     this.socket = undefined
+    this.listeners = {
+      tick: [],
+      receive: [],
+      disconnect: [],
+      reconnect: [],
+      error: []
+    }
   }
 
   connect() {
@@ -27,6 +26,36 @@ class WS extends EventTarget {
 
   send(data) {
     this.socket.send(JSON.stringify(data))
+  }
+
+  onTick(fn) {
+    this.listeners.tick.push(fn)
+  }
+
+  onReceive(fn) {
+    this.listeners.receive.push(fn)
+  }
+
+  onDisconnect(fn) {
+    this.listeners.disconnect.push(fn)
+  }
+
+  onReconnect(fn) {
+    this.listeners.reconnect.push(fn)
+  }
+
+  onError(fn) {
+    this.listeners.error.push(fn)
+  }
+
+  _dispatch(listeners, arg) {
+    listeners.forEach((listener) => {
+      try {
+        listener(arg)
+      } catch(e) {
+        console.error(e)
+      }
+    })
   }
 
   _connect(retriesLeft) {
@@ -40,20 +69,20 @@ class WS extends EventTarget {
       that.socket.addEventListener("message", (event) => {
         const data = JSON.parse(event.data)
         if (!('pong' in data)) {
-          that.dispatchEvent(new CustomEvent(WS.RECEIVE, {detail: data}))
+          that._dispatch(that.listeners.receive, data)
         }
       })
       that.socket.addEventListener("close", () => {
-        that.dispatchEvent(new CustomEvent(WS.DISCONNECT))
+        that._dispatch(that.listeners.disconnect)
         that.connect().then(() => {
-          that.dispatchEvent(new CustomEvent(WS.RECONNECT))
+          that._dispatch(that.listeners.reconnect)
         }).catch(() => {
-          that.dispatchEvent(new CustomEvent(WS.ERROR))
+          that._dispatch(that.listeners.error)
         })
       })
       const pingStrategy = that._attachPingStrategy(socket, options.pingInterval)
       pingStrategy.addEventListener("tick", (event) => {
-        that.dispatchEvent(new CustomEvent(WS.TICK, {detail: event.detail}))
+        that._dispatch(that.listeners.tick, event.detail)
       })
       return that
     }).catch((error) => {
@@ -97,9 +126,9 @@ class WS extends EventTarget {
   _attachPingStrategy(socket, interval) {
     const eventTarget = new EventTarget()
 
-    const tick = (data) => {
+    const tick = (info) => {
       eventTarget.dispatchEvent(new CustomEvent("tick", {
-        detail: data
+        detail: info
       }))
     }
 
