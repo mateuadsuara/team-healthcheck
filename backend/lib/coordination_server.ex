@@ -1,4 +1,4 @@
-defmodule ClientsCoordinationServer do
+defmodule CoordinationServer do
   use GenServer
 
   def state() do

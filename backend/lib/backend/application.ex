@@ -40,7 +40,7 @@ defmodule Backend.Application do
       # Starts a server by calling: Backend.Router.start_link(...)
       {Plug.Cowboy, scheme: scheme, plug: Backend.Router, options: options},
       {PerspectivesServer, name: PerspectivesServer},
-      {ClientsCoordinationServer, name: ClientsCoordinationServer},
+      {CoordinationServer, name: CoordinationServer},
       Registry.child_spec(keys: :duplicate, name: Registry.SocketHandler)
     ]
 

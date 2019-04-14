@@ -20,16 +20,16 @@ defmodule Backend.Router do
   get "/snapshot" do
     snapshot = %{
       graph: PerspectivesServer.graph,
-      coordination: ClientsCoordinationServer.state
+      coordination: CoordinationServer.state
     }
     send_resp(conn, 200, Poison.encode!(snapshot))
   end
 
   post "/set_active_metric" do
     active_metric = conn.params["active_metric"]
-    ClientsCoordinationServer.set_active_metric(active_metric)
+    CoordinationServer.set_active_metric(active_metric)
 
-    broadcast_ws(%{updatedCoordination: ClientsCoordinationServer.state})
+    broadcast_ws(%{updatedCoordination: CoordinationServer.state})
 
     send_resp(conn |> put_resp_header("location", "/"), 302, "")
   end
