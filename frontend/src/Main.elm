@@ -529,13 +529,22 @@ update msg model =
                 flags =
                     model.flags
 
-                updatedFlags =
-                    { flags | username = Just username }
+                trimmedUsername =
+                    String.trim username
             in
-            ( { model | flags = updatedFlags }, saveUsername username )
+            case trimmedUsername of
+                "" ->
+                    ( { model | flags = { flags | username = Nothing } }, saveUsername "" )
+
+                _ ->
+                    ( { model | flags = { flags | username = Just trimmedUsername } }, saveUsername trimmedUsername )
 
         CompleteUsername ->
-            ( { model | currentPage = PointsOfView }, Cmd.none )
+            if model.flags.username == Nothing then
+                ( { model | currentPage = Username }, Cmd.none )
+
+            else
+                ( { model | currentPage = PointsOfView }, Cmd.none )
 
         ChangeActiveMetric activeMetric ->
             ( model
