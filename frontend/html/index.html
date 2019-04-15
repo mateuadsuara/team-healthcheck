@@ -20,6 +20,10 @@
   <script>
     const usernameStorageKey = "username"
 
+    const isAdmin = new URL(window.location.href)
+      .searchParams
+      .get("admin") != null
+
     const now = new Date()
     const app = Elm.Main.init({
       node: document.getElementById("elm-f0111bc4e658d0f98db96260c16f7e49"),
@@ -29,7 +33,8 @@
           month: now.getMonth()+1,
           day: now.getDate()
         },
-        username: localStorage.getItem(usernameStorageKey)
+        username: localStorage.getItem(usernameStorageKey),
+        admin: isAdmin
       }
     })
 

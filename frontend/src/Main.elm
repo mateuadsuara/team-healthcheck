@@ -4,7 +4,7 @@ import Browser
 import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
-import Http
+import Http exposing (..)
 import Json.Decode exposing (Decoder, at, decodeString, int, list, map, map2, map3, map4, nullable, string)
 import Time
 
@@ -19,6 +19,15 @@ port updatedCoordination : (Coordination -> msg) -> Sub msg
 
 
 port updatedWebsocket : (String -> msg) -> Sub msg
+
+
+subscriptions : Model -> Sub Message
+subscriptions model =
+    Sub.batch
+        [ updatedGraph UpdatedGraph
+        , updatedCoordination UpdatedCoordination
+        , updatedWebsocket UpdatedWebsocket
+        ]
 
 
 type alias Range =
@@ -79,7 +88,7 @@ graphDecoder =
 
 
 type alias Coordination =
-    { activeMetric : Maybe MetricName
+    { active_metric : Maybe MetricName
     }
 
 
@@ -112,6 +121,7 @@ type alias StartDate =
 type alias Flags =
     { startDate : StartDate
     , username : Maybe Username
+    , admin : Bool
     }
 
 
@@ -161,6 +171,8 @@ type Message
     | UpdatedWebsocket String
     | SetPage Page
     | SaveUsername Username
+    | ChangedActiveMetric (Result Http.Error ())
+    | ChangeActiveMetric MetricName
     | CompleteUsername
     | UpdatedGraph Graph
     | UpdatedCoordination Coordination
@@ -224,36 +236,48 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                     text "You got disconnected! :( I am trying to reconnect..."
 
                 Connected ->
-                    case currentPage of
-                        Username ->
-                            viewUsername model
+                    if flags.admin then
+                        case currentPage of
+                            Username ->
+                                viewUsername model
 
-                        DataManagement ->
-                            div []
-                                [ viewNavigationLinks model
-                                , div [ class "ph3" ]
-                                    [ h1 [] [ text "View data:" ]
-                                    , viewGraph snapshot.graph
-                                    , h1 [] [ text "Manage data:" ]
-                                    , text "Warning: the format of this data is subject to change in the future."
-                                    , h4 [] [ text "Export:" ]
-                                    , viewExportLink
-                                    , h4 [] [ text "Restore:" ]
-                                    , viewRestoreForm
+                            DataManagement ->
+                                div []
+                                    [ viewNavigationLinks model
+                                    , div [ class "ph3" ]
+                                        [ h1 [] [ text "View data:" ]
+                                        , viewGraph snapshot.graph
+                                        , h1 [] [ text "Manage data:" ]
+                                        , text "Warning: the format of this data is subject to change in the future."
+                                        , h4 [] [ text "Export:" ]
+                                        , viewExportLink
+                                        , h4 [] [ text "Restore:" ]
+                                        , viewRestoreForm
+                                        ]
                                     ]
-                                ]
 
-                        Metrics ->
-                            div []
-                                [ viewNavigationLinks model
-                                , div [ class "ph3" ] [ viewMetricForm ]
-                                ]
+                            Metrics ->
+                                div []
+                                    [ viewNavigationLinks model
+                                    , div [ class "ph3" ] [ viewMetricForm ]
+                                    ]
 
-                        PointsOfView ->
-                            div []
-                                [ viewNavigationLinks model
-                                , div [ class "ph3" ] [ viewPointOfViewForm snapshot.graph flags.startDate (getUsername model) ]
-                                ]
+                            PointsOfView ->
+                                div []
+                                    [ viewNavigationLinks model
+                                    , div [ class "ph3" ] [ viewSelectMetric snapshot ]
+                                    ]
+
+                    else
+                        case currentPage of
+                            Username ->
+                                viewUsername model
+
+                            _ ->
+                                div [ class "ph3" ]
+                                    [ viewTopbar model
+                                    , div [ class "ph3" ] [ viewPointOfViewForm snapshot flags.startDate (getUsername model) ]
+                                    ]
 
 
 pageColor : Model -> Page -> String
@@ -263,6 +287,18 @@ pageColor model page =
 
     else
         " blue hover-light-blue"
+
+
+viewTopbar : Model -> Html Message
+viewTopbar model =
+    let
+        classesForPage page =
+            class <| "pr4 pointer" ++ pageColor model page
+    in
+    div [ class "flex justify-between blue w-100 pb3 pa3 bb mb3" ]
+        [ div [] []
+        , a [ onClick (SetPage Username), class "pointer hover-light-blue" ] [ text <| getUsername model ]
+        ]
 
 
 viewNavigationLinks : Model -> Html Message
@@ -385,25 +421,52 @@ getUsername model =
     Maybe.withDefault "" model.flags.username
 
 
-viewPointOfViewForm : Graph -> StartDate -> Username -> Html Message
-viewPointOfViewForm graph startDate username =
-    Html.form [ method "post", action "/register_point_of_view" ]
-        [ input [ type_ "date", name "date", value <| startDateForInput startDate, required True, hidden True ] []
-        , input [ type_ "text", name "person", value <| username, required True, hidden True ] []
-        , label [ for "metric_name" ] [ text "Metric: " ]
-        , viewDropdown [ id "metric_name", name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name }) graph
-        , br [] []
-        , label [ for "health" ] [ text "Health: " ]
-        , span [ class "red" ] [ text " (-1) bad " ]
-        , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
-        , span [ class "green" ] [ text " good (+1)" ]
-        , br [] []
-        , label [ for "slope" ] [ text "Slope: " ]
-        , text " (-1) ⇘ "
-        , input [ type_ "range", id "slope", name "slope", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
-        , text " ⇗ (+1)"
-        , br [] []
-        , input [ type_ "submit", value "Register Point Of View" ] []
+viewPointOfViewForm : Snapshot -> StartDate -> Username -> Html Message
+viewPointOfViewForm snapshot startDate username =
+    case getActiveMetric snapshot of
+        Nothing ->
+            text "Please wait while the admin selects a metric..."
+
+        Just metric ->
+            div []
+                [ Html.form [ method "post", action "/register_point_of_view" ]
+                    [ input [ type_ "date", name "date", value <| startDateForInput startDate, required True, hidden True ] []
+                    , input [ type_ "text", name "person", value <| username, required True, hidden True ] []
+                    , label [ for "metric_name" ] [ text <| "Metric: " ++ metric.name ]
+                    , input [ type_ "text", name "metric_name", value metric.name, required True, hidden True ] []
+                    , br [] []
+                    , label [] [ text <| "Criteria: " ++ metric.criteria ]
+                    , br [] []
+                    , label [ for "health" ] [ text "Health: " ]
+                    , span [ class "red" ] [ text " (-1) bad " ]
+                    , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+                    , span [ class "green" ] [ text " good (+1)" ]
+                    , br [] []
+                    , label [ for "slope" ] [ text "Slope: " ]
+                    , text " (-1) ⇘ "
+                    , input [ type_ "range", id "slope", name "slope", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+                    , text " ⇗ (+1)"
+                    , br [] []
+                    , input [ type_ "submit", value "Register Point Of View" ] []
+                    ]
+                ]
+
+
+getActiveMetric : Snapshot -> Maybe Metric
+getActiveMetric snapshot =
+    case snapshot.coordination.active_metric of
+        Nothing ->
+            Nothing
+
+        Just metric_name ->
+            List.filter (\m -> m.name == metric_name) snapshot.graph |> List.head
+
+
+viewSelectMetric : Snapshot -> Html Message
+viewSelectMetric snapshot =
+    div []
+        [ label [ for "metric_name" ] [ text "Metric for input: " ]
+        , viewDropdown [ id "metric_name", name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name, selected = Just metric.name == snapshot.coordination.active_metric }) ChangeActiveMetric snapshot.graph
         ]
 
 
@@ -425,13 +488,17 @@ leftZeroesPadding num =
         input
 
 
-viewDropdown : List (Attribute msg) -> (e -> { value : String, text : String }) -> List e -> Html msg
-viewDropdown attrs optionFn options =
-    select attrs
-        (List.map
-            (\e -> option [ value (optionFn e).value ] [ text (optionFn e).text ])
-            options
+viewDropdown : List (Attribute msg) -> (e -> { value : String, text : String, selected : Bool }) -> (String -> msg) -> List e -> Html msg
+viewDropdown attrs optionFn onChangeMessage options =
+    select
+        (attrs
+            ++ [ onInput onChangeMessage ]
         )
+    <|
+        [ option [] [] ]
+            ++ List.map
+                (\e -> option [ value (optionFn e).value, selected (optionFn e).selected ] [ text (optionFn e).text ])
+                options
 
 
 update : Message -> Model -> ( Model, Cmd Message )
@@ -469,6 +536,21 @@ update msg model =
 
         CompleteUsername ->
             ( { model | currentPage = PointsOfView }, Cmd.none )
+
+        ChangeActiveMetric activeMetric ->
+            ( model
+            , Http.post
+                { url = "/set_active_metric"
+                , expect = expectWhatever ChangedActiveMetric
+                , body =
+                    multipartBody
+                        [ stringPart "active_metric" activeMetric
+                        ]
+                }
+            )
+
+        ChangedActiveMetric _ ->
+            ( model, Cmd.none )
 
 
 mapSnapshot : SnapshotState -> (Snapshot -> Snapshot) -> SnapshotState
@@ -516,12 +598,3 @@ parseWebsocketState stateString =
 
         _ ->
             Nothing
-
-
-subscriptions : Model -> Sub Message
-subscriptions model =
-    Sub.batch
-        [ updatedGraph UpdatedGraph
-        , updatedCoordination UpdatedCoordination
-        , updatedWebsocket UpdatedWebsocket
-        ]

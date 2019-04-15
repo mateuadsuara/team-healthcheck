@@ -27,6 +27,7 @@ defmodule Backend.Router do
 
   post "/set_active_metric" do
     active_metric = conn.params["active_metric"]
+    active_metric = if active_metric == "" do nil else active_metric end
     CoordinationServer.set_active_metric(active_metric)
 
     broadcast_ws(%{updatedCoordination: CoordinationServer.state})
@@ -44,8 +45,10 @@ defmodule Backend.Router do
     {res, _} = serialised_json
                |> Poison.decode!(%{keys: :atoms!})
                |> PerspectivesServer.deserialise
+    CoordinationServer.set_active_metric(nil)
 
     broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
+    broadcast_ws(%{updatedCoordination: CoordinationServer.state})
 
     send_resp(conn |> put_resp_header("location", "/"), 302, Poison.encode!(res))
   end
