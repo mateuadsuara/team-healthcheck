@@ -190,7 +190,7 @@ main =
 
 initialPage : Page
 initialPage =
-    DataManagement
+    PointsOfView
 
 
 init : Flags -> ( Model, Cmd Message )
@@ -274,7 +274,7 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                                 viewUsername model
 
                             _ ->
-                                div [ class "ph3" ]
+                                div []
                                     [ viewTopbar model
                                     , div [ class "ph3" ] [ viewPointOfViewForm snapshot flags.startDate (getUsername model) ]
                                     ]
@@ -406,11 +406,23 @@ viewRestoreForm =
 viewMetricForm : Html Message
 viewMetricForm =
     Html.form [ method "post", action "/add_metric" ]
-        [ label [ for "name" ] [ text "Name: " ]
+        [ label [ for "name" ] [ text "We are looking for perspectives on: " ]
+        , br [] []
         , input [ type_ "text", id "name", name "name", placeholder "Name", required True ] []
         , br [] []
-        , label [ for "criteria" ] [ text "Criteria: " ]
-        , input [ type_ "text", id "criteria", name "criteria", placeholder "Criteria", required True ] []
+        , br [] []
+        , label [ for "criteria" ]
+            [ text "In order for everyone to be on the same page, the guidelines to be considered on how to rate it are:"
+            , br [] []
+            , span [ class "gray" ] [ text "(remember to define what a " ]
+            , span [ class "red" ] [ text "-1" ]
+            , span [ class "gray" ] [ text " means and what " ]
+            , span [ class "green" ] [ text "+1" ]
+            , span [ class "gray" ] [ text " would mean for the current situation --aka health-- and for comparing with before --aka slope--)" ]
+            ]
+        , br [] []
+        , textarea [ class "w-100", id "criteria", name "criteria", placeholder "Criteria", required True ] []
+        , br [] []
         , br [] []
         , input [ type_ "submit", value "Add Metric" ] []
         ]
@@ -425,29 +437,59 @@ viewPointOfViewForm : Snapshot -> StartDate -> Username -> Html Message
 viewPointOfViewForm snapshot startDate username =
     case getActiveMetric snapshot of
         Nothing ->
-            text "Please wait while the admin selects a metric..."
+            text "The faciliator is choosing what to do next..."
 
         Just metric ->
             div []
-                [ Html.form [ method "post", action "/register_point_of_view" ]
+                [ div [ class "tc" ]
+                    [ p [ class "f4-ns" ] [ text "We would like your perspective about: " ]
+                    , p [ class "blue" ] [ text metric.name ]
+                    ]
+                , br [] []
+                , br [] []
+                , br [] []
+                , span [] [ text <| "In order for everyone to be on the same page, please:" ]
+                , ol [ class "" ]
+                    [ li []
+                        [ span [] [ text <| "Consider the following on how to rate it:" ]
+                        , br [] []
+                        , span [ class "blue" ] [ text metric.criteria ]
+                        ]
+                    , br [] []
+                    , li []
+                        [ span [] [ text <| "Have a conversation about the facts you can recall. " ]
+                        , br [] []
+                        , span [ class "gray" ] [ text <| "(This will hopefully give everyone a broader perspective on the subject)" ]
+                        ]
+                    ]
+                , br [] []
+                , br [] []
+                , br [] []
+                , Html.form [ method "post", action "/register_point_of_view" ]
                     [ input [ type_ "date", name "date", value <| startDateForInput startDate, required True, hidden True ] []
                     , input [ type_ "text", name "person", value <| username, required True, hidden True ] []
-                    , label [ for "metric_name" ] [ text <| "Metric: " ++ metric.name ]
                     , input [ type_ "text", name "metric_name", value metric.name, required True, hidden True ] []
+                    , div [ class "tc" ]
+                        [ label [ class "f4-ns", for "health" ] [ text "Current situation: " ]
+                        , br [] []
+                        , br [] []
+                        , span [ class "red" ] [ text " (-1) bad " ]
+                        , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+                        , span [ class "green" ] [ text " good (+1)" ]
+                        ]
                     , br [] []
-                    , label [] [ text <| "Criteria: " ++ metric.criteria ]
                     , br [] []
-                    , label [ for "health" ] [ text "Health: " ]
-                    , span [ class "red" ] [ text " (-1) bad " ]
-                    , input [ type_ "range", id "health", name "health", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
-                    , span [ class "green" ] [ text " good (+1)" ]
+                    , div [ class "tc" ]
+                        [ label [ class "f4-ns", for "slope" ] [ text "Now compared to before: " ]
+                        , br [] []
+                        , br [] []
+                        , span [ class "red" ] [ text " (-1) ⇘ worse " ]
+                        , input [ type_ "range", id "slope", name "slope", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
+                        , span [ class "green" ] [ text " better ⇗ (+1)" ]
+                        ]
                     , br [] []
-                    , label [ for "slope" ] [ text "Slope: " ]
-                    , text " (-1) ⇘ "
-                    , input [ type_ "range", id "slope", name "slope", Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", required True ] []
-                    , text " ⇗ (+1)"
                     , br [] []
-                    , input [ type_ "submit", value "Register Point Of View" ] []
+                    , div [ class "tc" ] [ input [ type_ "submit", value "That's how I see it" ] [] ]
                     ]
                 ]
 
