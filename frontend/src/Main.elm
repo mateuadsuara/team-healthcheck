@@ -591,17 +591,22 @@ viewSelectMetric snapshot =
 
 viewPeopleRegisteredActiveMetric : Model -> Html Message
 viewPeopleRegisteredActiveMetric model =
-    let
-        people =
-            Maybe.withDefault [] <| Maybe.map (\metric -> metric.points_of_view) <| getActiveMetric model
-    in
-    div []
-        [ span [] [ text <| "People who submitted their perspective (" ++ (String.fromInt <| List.length people) ++ "):" ]
-        , ul [] <|
-            List.map
-                (\pov -> li [] [ text pov.person ])
-                people
-        ]
+    case getActiveMetric model of
+        Nothing ->
+            div [] []
+
+        Just activeMetric ->
+            let
+                people =
+                    activeMetric.points_of_view
+            in
+            div []
+                [ span [] [ text <| "People who submitted their perspective (" ++ (String.fromInt <| List.length people) ++ "):" ]
+                , ul [] <|
+                    List.map
+                        (\pov -> li [] [ text pov.person ])
+                        people
+                ]
 
 
 startDateForInput : StartDate -> String
