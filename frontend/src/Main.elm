@@ -5,7 +5,7 @@ import Html exposing (..)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onClick, onInput, onSubmit)
 import Http exposing (..)
-import Json.Decode exposing (Decoder, at, decodeString, int, list, map, map2, map3, map4, nullable, string)
+import Json.Decode exposing (Decoder, at, decodeString, int, list, map, map2, map3, map4, map5, nullable, string)
 import Time
 
 
@@ -63,18 +63,30 @@ type alias MetricCriteria =
     String
 
 
+type alias MetricGoodCriteria =
+    String
+
+
+type alias MetricBadCriteria =
+    String
+
+
 type alias Metric =
     { name : MetricName
     , criteria : MetricCriteria
+    , good_criteria : MetricGoodCriteria
+    , bad_criteria : MetricBadCriteria
     , points_of_view : List PointOfView
     }
 
 
 metricDecoder : Decoder Metric
 metricDecoder =
-    map3 Metric
+    map5 Metric
         (at [ "name" ] string)
         (at [ "criteria" ] string)
+        (at [ "good_criteria" ] string)
+        (at [ "bad_criteria" ] string)
         (at [ "points_of_view" ] (list pointOfViewDecoder))
 
 
@@ -418,22 +430,22 @@ viewMetricForm =
         , textarea [ class "w-100", id "criteria", name "criteria", placeholder "Description", required True ] []
         , br [] []
         , br [] []
-        , label [ for "criteria_for_good" ]
+        , label [ for "good_criteria" ]
             [ text "What does "
             , span [ class "green" ] [ text "good" ]
             , text " look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "criteria_for_good", name "criteria_for_good", placeholder "Good", required True ] []
+        , textarea [ class "w-100", id "good_criteria", name "good_criteria", placeholder "Good", required True ] []
         , br [] []
         , br [] []
-        , label [ for "criteria_for_bad" ]
+        , label [ for "bad_criteria" ]
             [ text "What does "
             , span [ class "red" ] [ text "bad" ]
             , text " look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "criteria_for_bad", name "criteria_for_bad", placeholder "Bad", required True ] []
+        , textarea [ class "w-100", id "bad_criteria", name "bad_criteria", placeholder "Bad", required True ] []
         , br [] []
         , br [] []
         , input [ type_ "submit", value "Add Metric" ] []
@@ -491,9 +503,9 @@ viewPointOfViewForm snapshot startDate username =
                         [ label [ class "f4-ns", for "health" ] [ text "Current situation: " ]
                         ]
                     , div [ class "fl w-100 tc pv3" ]
-                        [ div [ class "fl w-third v-mid tr red" ] [ text "bad" ]
+                        [ div [ class "fl w-third v-mid tr red" ] [ text metric.bad_criteria ]
                         , viewSlider "health" [ class "fl w-third" ]
-                        , div [ class "fl w-third v-mid tl green" ] [ text "good" ]
+                        , div [ class "fl w-third v-mid tl green" ] [ text metric.good_criteria ]
                         ]
                     , div [ class "fl w-100 tc" ]
                         [ label [ class "f4-ns", for "slope" ] [ text "Now compared to before: " ]

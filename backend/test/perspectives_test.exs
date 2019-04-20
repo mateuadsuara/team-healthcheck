@@ -14,15 +14,19 @@ defmodule PerspectivesTest do
   test "adds a metric" do
     name = '::name::'
     criteria = '::criteria::'
+    good_criteria = '::good_criteria::'
+    bad_criteria = '::bad_criteria::'
 
     g = new()
-        |> add_metric(%{name: name, criteria: criteria})
+        |> add_metric(%{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria})
         |> graph()
 
     assert g == [
       %Metric{
         name: name,
         criteria: criteria,
+        good_criteria: good_criteria,
+        bad_criteria: bad_criteria,
         points_of_view: []
       }
     ]
@@ -30,8 +34,8 @@ defmodule PerspectivesTest do
 
   test "cannot add two metrics with the same name" do
     res = new()
-          |> add_metric(%{name: '::name1::', criteria: '::criteria1::'})
-          |> add_metric(%{name: '::name1::', criteria: '::criteria2::'})
+          |> add_metric(%{name: '::name1::', criteria: '::criteria1::', good_criteria: '::good_criteria1::', bad_criteria: '::bad_criteria1::'})
+          |> add_metric(%{name: '::name1::', criteria: '::criteria2::', good_criteria: '::good_criteria2::', bad_criteria: '::bad_criteria2::'})
 
     assert res == {:error, :existent_metric}
   end
@@ -39,23 +43,31 @@ defmodule PerspectivesTest do
   test "adds two metrics" do
     name1 = '::name1::'
     criteria1 = '::criteria1::'
+    good_criteria1 = '::good_criteria1::'
+    bad_criteria1 = '::bad_criteria1::'
     name2 = '::name2::'
     criteria2 = '::criteria2::'
+    good_criteria2 = '::good_criteria2::'
+    bad_criteria2 = '::bad_criteria2::'
 
     g = new()
-        |> add_metric(%{name: name1, criteria: criteria1})
-        |> add_metric(%{name: name2, criteria: criteria2})
+        |> add_metric(%{name: name1, criteria: criteria1, good_criteria: good_criteria1, bad_criteria: bad_criteria1})
+        |> add_metric(%{name: name2, criteria: criteria2, good_criteria: good_criteria2, bad_criteria: bad_criteria2})
         |> graph()
 
     assert g == [
       %Metric{
         name: name2,
         criteria: criteria2,
+        good_criteria: good_criteria2,
+        bad_criteria: bad_criteria2,
         points_of_view: []
       },
       %Metric{
         name: name1,
         criteria: criteria1,
+        good_criteria: good_criteria1,
+        bad_criteria: bad_criteria1,
         points_of_view: []
       }
     ]
@@ -64,13 +76,15 @@ defmodule PerspectivesTest do
   test "registers a point of view" do
     name = '::name::'
     criteria = '::criteria::'
+    good_criteria = '::good_criteria::'
+    bad_criteria = '::bad_criteria::'
     date = Time.utc_now()
     person = '::person::'
     health = 1
     slope = 0
 
     g = new()
-        |> add_metric(%{name: name, criteria: criteria})
+        |> add_metric(%{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria})
         |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
         |> graph()
 
@@ -78,6 +92,8 @@ defmodule PerspectivesTest do
       %Metric{
         name: name,
         criteria: criteria,
+        good_criteria: good_criteria,
+        bad_criteria: bad_criteria,
         points_of_view: [
           %PointOfView{
             date: date,
@@ -93,13 +109,15 @@ defmodule PerspectivesTest do
   test "overwrites an exising point of view from the same person and date" do
     name = '::name::'
     criteria = '::criteria::'
+    good_criteria = '::good_criteria::'
+    bad_criteria = '::bad_criteria::'
     date = Time.utc_now()
     person = '::person::'
     health = 0
     slope = 1
 
     g = new()
-        |> add_metric(%{name: name, criteria: criteria})
+        |> add_metric(%{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria})
         |> register_point_of_view(%{metric_name: name, date: date, person: person, health: 1, slope: 0})
         |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
         |> graph()
@@ -108,6 +126,8 @@ defmodule PerspectivesTest do
       %Metric{
         name: name,
         criteria: criteria,
+        good_criteria: good_criteria,
+        bad_criteria: bad_criteria,
         points_of_view: [
           %PointOfView{
             date: date,
@@ -130,6 +150,8 @@ defmodule PerspectivesTest do
   test "registers two points of view" do
     name = '::name::'
     criteria = '::criteria::'
+    good_criteria = '::good_criteria::'
+    bad_criteria = '::bad_criteria::'
     date1 = Time.utc_now()
     person1 = '::person1::'
     health1 = 1
@@ -140,7 +162,7 @@ defmodule PerspectivesTest do
     slope2 = 1
 
     g = new()
-        |> add_metric(%{name: name, criteria: criteria})
+        |> add_metric(%{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria})
         |> register_point_of_view(%{metric_name: name, date: date1, person: person1, health: health1, slope: slope1})
         |> register_point_of_view(%{metric_name: name, date: date2, person: person2, health: health2, slope: slope2})
         |> graph()
@@ -149,6 +171,8 @@ defmodule PerspectivesTest do
       %Metric{
         name: name,
         criteria: criteria,
+        good_criteria: good_criteria,
+        bad_criteria: bad_criteria,
         points_of_view: [
           %PointOfView{
             date: date2,
@@ -175,7 +199,7 @@ defmodule PerspectivesTest do
     slope = 0
 
     perspectives_a = new()
-                     |> add_metric(%{name: name, criteria: '::criteria::'})
+                     |> add_metric(%{name: name, criteria: '::criteria::', good_criteria: '::good_criteria::', bad_criteria: '::bad_criteria::'})
 
     {:ok, perspectives_b} = perspectives_a
                             |> serialise()

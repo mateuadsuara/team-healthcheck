@@ -18,15 +18,19 @@ defmodule Perspectives do
   end
 
   defmodule Metric do
-    @enforce_keys [:name, :criteria, :points_of_view]
-    defstruct [:name, :criteria, :points_of_view]
+    @enforce_keys [:name, :criteria, :good_criteria, :bad_criteria, :points_of_view]
+    defstruct [:name, :criteria, :good_criteria, :bad_criteria, :points_of_view]
 
     @type name :: String.t()
     @type criteria :: String.t()
+    @type good_criteria :: String.t()
+    @type bad_criteria :: String.t()
 
     @type t :: %__MODULE__{
       name: name(),
       criteria: criteria(),
+      good_criteria: good_criteria(),
+      bad_criteria: bad_criteria(),
       points_of_view: list(PointOfView.t())
     }
   end
@@ -78,17 +82,19 @@ defmodule Perspectives do
 
   @type metric_to_add :: %{
     required(:name) => Metric.name(),
-    required(:criteria) => Metric.criteria()
+    required(:criteria) => Metric.criteria(),
+    required(:good_criteria) => Metric.good_criteria(),
+    required(:bad_criteria) => Metric.bad_criteria()
   }
   @spec add_metric(internal_state :: t(), metric_to_add()) :: {:error, :existent_metric} | {:ok, internal_state :: t()}
   def add_metric(
     %Perspectives{_metrics: metrics, _names: names} = internal_state,
-    %{name: name, criteria: criteria}
+    %{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria}
   ) do
     if MapSet.member?(names, name) do
       {:error, :existent_metric}
     else
-      new_metric = %Metric{name: name, criteria: criteria, points_of_view: []}
+      new_metric = %Metric{name: name, criteria: criteria, good_criteria: good_criteria, bad_criteria: bad_criteria, points_of_view: []}
       {:ok, %Perspectives{internal_state |
         _metrics: [new_metric | metrics],
         _names: MapSet.put(names, name)

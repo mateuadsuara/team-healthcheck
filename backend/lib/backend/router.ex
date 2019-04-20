@@ -56,9 +56,13 @@ defmodule Backend.Router do
   post "/add_metric" do
     name = conn.params["name"]
     criteria = conn.params["criteria"]
+    good_criteria = conn.params["good_criteria"]
+    bad_criteria = conn.params["bad_criteria"]
     {res, _} = PerspectivesServer.add_metric(%{
       name: name,
-      criteria: criteria
+      criteria: criteria,
+      good_criteria: good_criteria,
+      bad_criteria: bad_criteria
     })
 
     broadcast_ws(%{updatedGraph: PerspectivesServer.graph})
