@@ -123,11 +123,27 @@ defmodule Perspectives do
     Enum.map(metrics, fn(metric) ->
       if metric.name == metric_name do
         %{metric |
-          points_of_view: [new_point_of_view | metric.points_of_view]
+          points_of_view: update_points_of_view(metric.points_of_view, new_point_of_view)
         }
       else
         metric
       end
     end)
+  end
+  defp update_points_of_view(points_of_view, new_point_of_view) do
+    if points_of_view |> Enum.any?(fn pov -> matches_person_and_date(pov, new_point_of_view) end) do
+      Enum.map(points_of_view, fn(pov) ->
+        if matches_person_and_date(pov, new_point_of_view) do
+          new_point_of_view
+        else
+          pov
+        end
+      end)
+    else
+      [new_point_of_view | points_of_view]
+    end
+  end
+  defp matches_person_and_date(pov, new_point_of_view) do
+    pov.date == new_point_of_view.date && pov.person == new_point_of_view.person
   end
 end

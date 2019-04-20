@@ -90,6 +90,36 @@ defmodule PerspectivesTest do
     ]
   end
 
+  test "overwrites an exising point of view from the same person and date" do
+    name = '::name::'
+    criteria = '::criteria::'
+    date = Time.utc_now()
+    person = '::person::'
+    health = 0
+    slope = 1
+
+    g = new()
+        |> add_metric(%{name: name, criteria: criteria})
+        |> register_point_of_view(%{metric_name: name, date: date, person: person, health: 1, slope: 0})
+        |> register_point_of_view(%{metric_name: name, date: date, person: person, health: health, slope: slope})
+        |> graph()
+
+    assert g == [
+      %Metric{
+        name: name,
+        criteria: criteria,
+        points_of_view: [
+          %PointOfView{
+            date: date,
+            person: person,
+            health: health,
+            slope: slope
+          }
+        ]
+      }
+    ]
+  end
+
   test "cannot register a point of view for an unexisting metric name" do
     res = new()
           |> register_point_of_view(%{metric_name: '::name::', date: Time.utc_now, person: '::person::', health: 1, slope: 0})
