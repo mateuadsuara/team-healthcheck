@@ -156,8 +156,7 @@ type WebsocketState
 
 
 type Page
-    = PointsOfView
-    | Metrics
+    = Admin
     | DataManagement
     | Username
 
@@ -202,7 +201,7 @@ main =
 
 initialPage : Page
 initialPage =
-    PointsOfView
+    Admin
 
 
 init : Flags -> ( Model, Cmd Message )
@@ -257,7 +256,9 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                                 div []
                                     [ viewNavigationLinks model
                                     , div [ class "ph3" ]
-                                        [ h1 [] [ text "View data:" ]
+                                        [ h1 [] [ text "Add metrics:" ]
+                                        , viewMetricForm
+                                        , h1 [] [ text "View data:" ]
                                         , viewGraph snapshot.graph
                                         , h1 [] [ text "Manage data:" ]
                                         , text "Warning: the format of this data is subject to change in the future."
@@ -268,16 +269,11 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                                         ]
                                     ]
 
-                            Metrics ->
+                            Admin ->
                                 div []
                                     [ viewNavigationLinks model
-                                    , div [ class "ph3" ] [ viewMetricForm ]
-                                    ]
-
-                            PointsOfView ->
-                                div []
-                                    [ viewNavigationLinks model
-                                    , div [ class "ph3" ] [ viewSelectMetric snapshot ]
+                                    , div [ class "ph3 pv3" ] [ viewSelectMetric snapshot ]
+                                    , div [ class "ph3 pv3" ] [ viewPeopleRegisteredActiveMetric model ]
                                     ]
 
                     else
@@ -321,8 +317,7 @@ viewNavigationLinks model =
     in
     div [ class "flex justify-between blue w-100 pb3 pa3 bb mb3" ]
         [ div []
-            [ a [ onClick (SetPage PointsOfView), classesForPage PointsOfView ] [ text "Points of view" ]
-            , a [ onClick (SetPage Metrics), classesForPage Metrics ] [ text "Metrics" ]
+            [ a [ onClick (SetPage Admin), classesForPage Admin ] [ text "Admin" ]
             , a [ onClick (SetPage DataManagement), classesForPage DataManagement ] [ text "DataManagement" ]
             ]
         , a [ onClick (SetPage Username), class "pointer hover-light-blue" ] [ text <| getUsername model ]
@@ -396,7 +391,7 @@ viewPointsOfView : List PointOfView -> Html Message
 viewPointsOfView povs =
     ul []
         (List.map
-            (\pov -> li [] [ text (pov.date ++ " [health: " ++ String.fromFloat (absRange pov.health) ++ ", slope: " ++ String.fromFloat (absRange pov.slope) ++ "] ") ])
+            (\pov -> li [] [ text (pov.date ++ " - " ++ pov.person ++ " [health: " ++ String.fromFloat (absRange pov.health) ++ ", slope: " ++ String.fromFloat (absRange pov.slope) ++ "] ") ])
             povs
         )
 
@@ -594,6 +589,21 @@ viewSelectMetric snapshot =
         ]
 
 
+viewPeopleRegisteredActiveMetric : Model -> Html Message
+viewPeopleRegisteredActiveMetric model =
+    let
+        people =
+            Maybe.withDefault [] <| Maybe.map (\metric -> metric.points_of_view) <| getActiveMetric model
+    in
+    div []
+        [ span [] [ text <| "People who submitted their perspective (" ++ (String.fromInt <| List.length people) ++ "):" ]
+        , ul [] <|
+            List.map
+                (\pov -> li [] [ text pov.person ])
+                people
+        ]
+
+
 startDateForInput : StartDate -> String
 startDateForInput { year, month, day } =
     leftZeroesPadding year ++ "-" ++ leftZeroesPadding month ++ "-" ++ leftZeroesPadding day
@@ -668,7 +678,7 @@ update msg model =
                 ( { model | currentPage = Username }, Cmd.none )
 
             else
-                ( { model | currentPage = PointsOfView }, Cmd.none )
+                ( { model | currentPage = Admin }, Cmd.none )
 
         ChangeActiveMetric activeMetric ->
             ( model
