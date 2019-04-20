@@ -261,7 +261,7 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                                         , h1 [] [ text "View data:" ]
                                         , viewGraph snapshot.graph
                                         , h1 [] [ text "Manage data:" ]
-                                        , text "Warning: the format of this data is subject to change in the future."
+                                        , span [ class "red" ] [ text "Warning: the format of this data is subject to change in the future." ]
                                         , h4 [] [ text "Export:" ]
                                         , viewExportLink
                                         , h4 [] [ text "Restore:" ]
@@ -345,7 +345,7 @@ viewGraph graph =
         (List.map
             (\metric ->
                 li []
-                    [ text (metric.name ++ " (" ++ metric.criteria ++ ")" ++ " [health: " ++ String.fromFloat (calculateAverageRange <| extractHealths metric.points_of_view) ++ ", slope: " ++ String.fromFloat (calculateAverageRange <| extractSlopes metric.points_of_view) ++ "]")
+                    [ text (metric.name ++ " [health: " ++ String.fromFloat (calculateAverageRange <| extractHealths metric.points_of_view) ++ ", slope: " ++ String.fromFloat (calculateAverageRange <| extractSlopes metric.points_of_view) ++ "]")
                     , viewPointsOfView metric.points_of_view
                     ]
             )
@@ -413,34 +413,44 @@ viewRestoreForm =
 viewMetricForm : Html Message
 viewMetricForm =
     Html.form [ method "post", action "/add_metric" ]
-        [ label [ for "name" ] [ text "The subject you'd like perspectives on: " ]
+        [ label [ for "name" ]
+            [ text "The "
+            , span [ class "blue" ] [ text "subject" ]
+            , text " you'd like perspectives on:"
+            ]
         , br [] []
-        , input [ type_ "text", id "name", name "name", placeholder "Name", required True ] []
+        , input [ class "w-100", type_ "text", id "name", name "name", placeholder "e.g: Learning", required True ] []
         , br [] []
         , br [] []
         , label [ for "criteria" ]
-            [ text "Describe it in detail:"
+            [ text "Describe the "
+            , span [ class "blue" ] [ text "subject" ]
+            , text " or ask a question to be answered with anything between "
+            , span [ class "green" ] [ text "something positive" ]
+            , text " and "
+            , span [ class "red" ] [ text "something negative" ]
+            , text ":"
             ]
         , br [] []
-        , textarea [ class "w-100", id "criteria", name "criteria", placeholder "Description", required True ] []
+        , textarea [ class "w-100", id "criteria", name "criteria", placeholder "e.g: Are you learning?", required True ] []
         , br [] []
         , br [] []
         , label [ for "good_criteria" ]
-            [ text "What does "
-            , span [ class "green" ] [ text "good" ]
-            , text " look like?:"
+            [ text "What does the most "
+            , span [ class "green" ] [ text "positive (+1)" ]
+            , text " answer look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "good_criteria", name "good_criteria", placeholder "Description of good :)", required True ] []
+        , textarea [ class "w-100", id "good_criteria", name "good_criteria", placeholder "e.g: I am learning everyday!", required True ] []
         , br [] []
         , br [] []
         , label [ for "bad_criteria" ]
-            [ text "What does "
-            , span [ class "red" ] [ text "bad" ]
-            , text " look like?:"
+            [ text "What does the most "
+            , span [ class "red" ] [ text "negative (-1)" ]
+            , text " answer look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "bad_criteria", name "bad_criteria", placeholder "Description of bad :(", required True ] []
+        , textarea [ class "w-100", id "bad_criteria", name "bad_criteria", placeholder "e.g: I am not learning anything", required True ] []
         , br [] []
         , br [] []
         , input [ type_ "submit", value "Add Metric" ] []
@@ -474,12 +484,14 @@ viewPointOfViewForm model =
         Just metric ->
             div []
                 [ div [ class "tc" ]
-                    [ p [] [ text "We would like your perspective on: " ]
-                    , p [ class "f3-ns blue" ] [ text metric.name ]
-                    , p [ class "blue" ] [ text metric.criteria ]
+                    [ p []
+                        [ text "We would like your perspective about "
+                        , span [ class "blue" ] [ text metric.name ]
+                        ]
+                    , p [ class "f3-ns blue" ] [ text metric.criteria ]
                     ]
                 , div []
-                    [ span [] [ text <| "In order for everyone to be on the same page about it:" ]
+                    [ span [] [ text <| "To broaden everyone's perspective about it, please:" ]
                     , ol []
                         [ li [ class "pv2" ]
                             [ span [] [ text <| "Share any facts you recall." ]
@@ -584,7 +596,7 @@ viewSlider idName val attributes =
 viewSelectMetric : Snapshot -> Html Message
 viewSelectMetric snapshot =
     div []
-        [ label [ for "metric_name" ] [ text "Metric for input: " ]
+        [ label [ for "metric_name" ] [ text "Metric to ask for input: " ]
         , viewDropdown [ id "metric_name", name "metric_name", required True ] (\metric -> { value = metric.name, text = metric.name, selected = Just metric.name == snapshot.coordination.active_metric }) ChangeActiveMetric snapshot.graph
         ]
 
