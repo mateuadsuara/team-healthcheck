@@ -288,7 +288,7 @@ view ({ snapshotState, websocketState, flags, currentPage } as model) =
                             _ ->
                                 div []
                                     [ viewTopbar model
-                                    , div [ class "ph3" ] [ viewPointOfViewForm snapshot flags.startDate (getUsername model) ]
+                                    , div [ class "ph3" ] [ viewPointOfViewForm model ]
                                     ]
 
 
@@ -436,7 +436,7 @@ viewMetricForm =
             , text " look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "good_criteria", name "good_criteria", placeholder "Good", required True ] []
+        , textarea [ class "w-100", id "good_criteria", name "good_criteria", placeholder "Description of good :)", required True ] []
         , br [] []
         , br [] []
         , label [ for "bad_criteria" ]
@@ -445,7 +445,7 @@ viewMetricForm =
             , text " look like?:"
             ]
         , br [] []
-        , textarea [ class "w-100", id "bad_criteria", name "bad_criteria", placeholder "Bad", required True ] []
+        , textarea [ class "w-100", id "bad_criteria", name "bad_criteria", placeholder "Description of bad :(", required True ] []
         , br [] []
         , br [] []
         , input [ type_ "submit", value "Add Metric" ] []
@@ -457,9 +457,22 @@ getUsername model =
     Maybe.withDefault "" model.flags.username
 
 
-viewPointOfViewForm : Snapshot -> StartDate -> Username -> Html Message
-viewPointOfViewForm snapshot startDate username =
-    case getActiveMetric snapshot of
+viewPointOfViewForm : Model -> Html Message
+viewPointOfViewForm model =
+    let
+        startDate =
+            model.flags.startDate
+
+        username =
+            getUsername model
+
+        activeMetric =
+            getActiveMetric model
+
+        userPov =
+            Maybe.withDefault { default = True, slope = 0, health = 0 } <| Maybe.map (\pov -> { default = False, slope = pov.slope, health = pov.health }) <| getUsersPointOfView model
+    in
+    case activeMetric of
         Nothing ->
             div [ class "tc" ] [ text "The faciliator is choosing what to do next..." ]
 
@@ -504,7 +517,7 @@ viewPointOfViewForm snapshot startDate username =
                         ]
                     , div [ class "fl w-100 tc pv3" ]
                         [ div [ class "fl w-third v-mid tr red" ] [ text metric.bad_criteria ]
-                        , viewSlider "health" [ class "fl w-third" ]
+                        , viewSlider "health" userPov.health [ class "fl w-third" ]
                         , div [ class "fl w-third v-mid tl green" ] [ text metric.good_criteria ]
                         ]
                     , div [ class "fl w-100 tc" ]
@@ -512,28 +525,56 @@ viewPointOfViewForm snapshot startDate username =
                         ]
                     , div [ class "fl w-100 tc pv3" ]
                         [ div [ class "fl w-third tr red" ] [ text "worse" ]
-                        , viewSlider "slope" [ class "fl w-third" ]
+                        , viewSlider "slope" userPov.slope [ class "fl w-third" ]
                         , div [ class "fl w-third tl green" ] [ text "better" ]
                         ]
-                    , div [ class "fl w-100 tc" ] [ input [ type_ "submit", value "That's how I see it" ] [] ]
+                    , div [ class "fl w-100 tc" ]
+                        [ input
+                            [ type_ "submit"
+                            , value <|
+                                if userPov.default then
+                                    "That's how I see it"
+
+                                else
+                                    "I changed my mind, I see it like this now"
+                            ]
+                            []
+                        ]
                     ]
                 ]
 
 
-getActiveMetric : Snapshot -> Maybe Metric
-getActiveMetric snapshot =
-    case snapshot.coordination.active_metric of
-        Nothing ->
+getActiveMetric : Model -> Maybe Metric
+getActiveMetric model =
+    case model.snapshotState of
+        Loaded snapshot ->
+            Maybe.andThen
+                (\metric_name -> List.filter (\m -> m.name == metric_name) snapshot.graph |> List.head)
+                snapshot.coordination.active_metric
+
+        _ ->
             Nothing
 
-        Just metric_name ->
-            List.filter (\m -> m.name == metric_name) snapshot.graph |> List.head
+
+getUsersPointOfView : Model -> Maybe PointOfView
+getUsersPointOfView model =
+    case model.flags.username of
+        Just username ->
+            case getActiveMetric model of
+                Just metric ->
+                    List.filter (\pov -> pov.person == username) metric.points_of_view |> List.head
+
+                _ ->
+                    Nothing
+
+        _ ->
+            Nothing
 
 
-viewSlider : String -> List (Attribute msg) -> Html msg
-viewSlider idName attributes =
+viewSlider : String -> Range -> List (Attribute msg) -> Html msg
+viewSlider idName val attributes =
     div attributes
-        [ input [ class "w-90 v-mid", type_ "range", id idName, name idName, Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value "0", Html.Attributes.list <| idName ++ "_data", required True ]
+        [ input [ class "w-90 v-mid", type_ "range", id idName, name idName, Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value <| String.fromInt val, Html.Attributes.list <| idName ++ "_data", required True ]
             []
         , datalist [ id <| idName ++ "_data" ]
             [ option [ value "-4" ] []
