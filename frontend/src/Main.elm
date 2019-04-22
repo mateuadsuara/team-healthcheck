@@ -161,11 +161,18 @@ type Page
     | Username
 
 
+type alias Rating =
+    { health : Range
+    , slope : Range
+    }
+
+
 type alias Model =
     { flags : Flags
     , snapshotState : SnapshotState
     , websocketState : WebsocketState
     , currentPage : Page
+    , selectedRating : Rating
     }
 
 
@@ -187,6 +194,8 @@ type Message
     | CompleteUsername
     | UpdatedGraph Graph
     | UpdatedCoordination Coordination
+    | ChangedHealth String
+    | ChangedSlope String
 
 
 main : Program Flags Model Message
@@ -215,12 +224,21 @@ init flags =
 
             else
                 initialPage
+      , selectedRating =
+            initialRating
       }
     , Http.get
         { url = "/snapshot"
         , expect = Http.expectString GotSnapshot
         }
     )
+
+
+initialRating : Rating
+initialRating =
+    { health = 0
+    , slope = 0
+    }
 
 
 view : Model -> Html Message
@@ -391,9 +409,19 @@ viewPointsOfView : List PointOfView -> Html Message
 viewPointsOfView povs =
     ul []
         (List.map
-            (\pov -> li [] [ text (pov.date ++ " - " ++ pov.person ++ " [health: " ++ String.fromFloat (absRange pov.health) ++ ", slope: " ++ String.fromFloat (absRange pov.slope) ++ "] ") ])
+            (\pov -> li [] [ text (pov.date ++ " - " ++ pov.person ++ " " ++ povRatingString pov) ])
             povs
         )
+
+
+povRatingString : PointOfView -> String
+povRatingString pov =
+    "[health: " ++ rangeToString pov.health ++ ", slope: " ++ rangeToString pov.slope ++ "]"
+
+
+rangeToString : Range -> String
+rangeToString rangeValue =
+    String.fromFloat (absRange rangeValue)
 
 
 viewExportLink : Html Message
@@ -423,9 +451,9 @@ viewMetricForm =
         , br [] []
         , br [] []
         , label [ for "criteria" ]
-            [ text "Describe the "
+            [ text " Ask a question about the "
             , span [ class "blue" ] [ text "subject" ]
-            , text " or ask a question to be answered with anything between "
+            , text " to be answered with anything between "
             , span [ class "green" ] [ text "something positive" ]
             , text " and "
             , span [ class "red" ] [ text "something negative" ]
@@ -436,8 +464,8 @@ viewMetricForm =
         , br [] []
         , br [] []
         , label [ for "good_criteria" ]
-            [ text "What does the most "
-            , span [ class "green" ] [ text "positive (+1)" ]
+            [ text "What does the "
+            , span [ class "green" ] [ text "most positive (+1)" ]
             , text " answer look like?:"
             ]
         , br [] []
@@ -445,8 +473,8 @@ viewMetricForm =
         , br [] []
         , br [] []
         , label [ for "bad_criteria" ]
-            [ text "What does the most "
-            , span [ class "red" ] [ text "negative (-1)" ]
+            [ text "What does the "
+            , span [ class "red" ] [ text "most negative (-1)" ]
             , text " answer look like?:"
             ]
         , br [] []
@@ -462,6 +490,41 @@ getUsername model =
     Maybe.withDefault "" model.flags.username
 
 
+type RatingValidation
+    = Unchanged
+    | SlopeCannotBeWorse
+    | SlopeCannotBeBetter
+    | ValidRerating
+    | ValidRating
+
+
+validateSelectedRating : Model -> RatingValidation
+validateSelectedRating model =
+    let
+        isRated =
+            case getActiveRating model of
+                Nothing ->
+                    False
+
+                Just _ ->
+                    True
+    in
+    if getActiveRating model == Just model.selectedRating then
+        Unchanged
+
+    else if model.selectedRating.health == maxRange && model.selectedRating.slope < 0 then
+        SlopeCannotBeWorse
+
+    else if model.selectedRating.health == (maxRange * -1) && model.selectedRating.slope > 0 then
+        SlopeCannotBeBetter
+
+    else if isRated then
+        ValidRerating
+
+    else
+        ValidRating
+
+
 viewPointOfViewForm : Model -> Html Message
 viewPointOfViewForm model =
     let
@@ -474,8 +537,11 @@ viewPointOfViewForm model =
         activeMetric =
             getActiveMetric model
 
-        userPov =
-            Maybe.withDefault { default = True, slope = 0, health = 0 } <| Maybe.map (\pov -> { default = False, slope = pov.slope, health = pov.health }) <| getUsersPointOfView model
+        selectedRating =
+            model.selectedRating
+
+        ratingValidation =
+            validateSelectedRating model
     in
     case activeMetric of
         Nothing ->
@@ -521,7 +587,7 @@ viewPointOfViewForm model =
                         ]
                     , div [ class "fl w-100 tc pv3" ]
                         [ div [ class "fl w-third v-mid tr red" ] [ text metric.bad_criteria ]
-                        , viewSlider "health" userPov.health [ class "fl w-third" ]
+                        , viewSlider "health" selectedRating.health ChangedHealth [ class "fl w-third" ]
                         , div [ class "fl w-third v-mid tl green" ] [ text metric.good_criteria ]
                         ]
                     , div [ class "fl w-100 tc" ]
@@ -529,21 +595,26 @@ viewPointOfViewForm model =
                         ]
                     , div [ class "fl w-100 tc pv3" ]
                         [ div [ class "fl w-third tr red" ] [ text "worse" ]
-                        , viewSlider "slope" userPov.slope [ class "fl w-third" ]
+                        , viewSlider "slope" selectedRating.slope ChangedSlope [ class "fl w-third" ]
                         , div [ class "fl w-third tl green" ] [ text "better" ]
                         ]
                     , div [ class "fl w-100 tc" ]
-                        [ input
-                            [ type_ "submit"
-                            , value <|
-                                if userPov.default then
-                                    "That's how I see it"
+                        (case ratingValidation of
+                            Unchanged ->
+                                []
 
-                                else
-                                    "I changed my mind, I see it like this now"
-                            ]
-                            []
-                        ]
+                            SlopeCannotBeWorse ->
+                                [ span [ class "red" ] [ text "The current situation cannot not be worse!" ] ]
+
+                            SlopeCannotBeBetter ->
+                                [ span [ class "red" ] [ text "The current situation cannot not be better!" ] ]
+
+                            ValidRerating ->
+                                [ input [ type_ "submit", value <| "I changed my mind, I see it like this now" ] [] ]
+
+                            ValidRating ->
+                                [ input [ type_ "submit", value <| "That's how I see it" ] [] ]
+                        )
                     ]
                 ]
 
@@ -560,13 +631,13 @@ getActiveMetric model =
             Nothing
 
 
-getUsersPointOfView : Model -> Maybe PointOfView
-getUsersPointOfView model =
+getActiveRating : Model -> Maybe Rating
+getActiveRating model =
     case model.flags.username of
         Just username ->
             case getActiveMetric model of
                 Just metric ->
-                    List.filter (\pov -> pov.person == username) metric.points_of_view |> List.head
+                    List.filter (\pov -> pov.person == username) metric.points_of_view |> List.head |> Maybe.map (\pov -> { slope = pov.slope, health = pov.health })
 
                 _ ->
                     Nothing
@@ -575,10 +646,10 @@ getUsersPointOfView model =
             Nothing
 
 
-viewSlider : String -> Range -> List (Attribute msg) -> Html msg
-viewSlider idName val attributes =
+viewSlider : String -> Range -> (String -> msg) -> List (Attribute msg) -> Html msg
+viewSlider idName val message attributes =
     div attributes
-        [ input [ class "w-90 v-mid", type_ "range", id idName, name idName, Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value <| String.fromInt val, Html.Attributes.list <| idName ++ "_data", required True ]
+        [ input [ class "w-90 v-mid", type_ "range", id idName, name idName, Html.Attributes.min ("-" ++ String.fromInt maxRange), Html.Attributes.max (String.fromInt maxRange), value <| String.fromInt val, Html.Attributes.list <| idName ++ "_data", required True, onInput message ]
             []
         , datalist [ id <| idName ++ "_data" ]
             [ option [ value "-4" ] []
@@ -613,7 +684,7 @@ viewPeopleRegisteredActiveMetric model =
                 [ span [] [ text <| "People who submitted their perspective (" ++ (String.fromInt <| List.length people) ++ "):" ]
                 , ul [] <|
                     List.map
-                        (\pov -> li [] [ text pov.person ])
+                        (\pov -> li [] [ text <| pov.person ++ " " ++ povRatingString pov ])
                         people
                 ]
 
@@ -649,11 +720,20 @@ viewDropdown attrs optionFn onChangeMessage options =
                 options
 
 
+updateRating : Model -> Model
+updateRating model =
+    let
+        updatedRating =
+            Maybe.withDefault initialRating <| getActiveRating model
+    in
+    { model | selectedRating = updatedRating }
+
+
 update : Message -> Model -> ( Model, Cmd Message )
 update msg model =
     case msg of
         GotSnapshot result ->
-            ( { model | snapshotState = updateSnapshotState result model }, Cmd.none )
+            ( updateRating { model | snapshotState = updateSnapshotState result model }, Cmd.none )
 
         UpdatedWebsocket stateString ->
             case parseWebsocketState stateString of
@@ -664,10 +744,14 @@ update msg model =
                     ( model, Cmd.none )
 
         UpdatedGraph graph ->
-            ( { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | graph = graph }) }, Cmd.none )
+            ( updateRating { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | graph = graph }) }, Cmd.none )
 
         UpdatedCoordination coordination ->
-            ( { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | coordination = coordination }) }, Cmd.none )
+            let
+                modelUpdatedWithCoordination =
+                    { model | snapshotState = mapSnapshot model.snapshotState (\snapshot -> { snapshot | coordination = coordination }) }
+            in
+            ( updateRating modelUpdatedWithCoordination, Cmd.none )
 
         SetPage page ->
             ( { model | currentPage = page }, Cmd.none )
@@ -708,6 +792,42 @@ update msg model =
 
         ChangedActiveMetric _ ->
             ( model, Cmd.none )
+
+        ChangedHealth str ->
+            let
+                maybeRange =
+                    String.toInt str
+
+                selectedRating =
+                    model.selectedRating
+
+                updatedRating =
+                    case maybeRange of
+                        Nothing ->
+                            selectedRating
+
+                        Just range ->
+                            { selectedRating | health = range }
+            in
+            ( { model | selectedRating = updatedRating }, Cmd.none )
+
+        ChangedSlope str ->
+            let
+                maybeRange =
+                    String.toInt str
+
+                selectedRating =
+                    model.selectedRating
+
+                updatedRating =
+                    case maybeRange of
+                        Nothing ->
+                            selectedRating
+
+                        Just range ->
+                            { selectedRating | slope = range }
+            in
+            ( { model | selectedRating = updatedRating }, Cmd.none )
 
 
 mapSnapshot : SnapshotState -> (Snapshot -> Snapshot) -> SnapshotState
