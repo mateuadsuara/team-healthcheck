@@ -604,10 +604,10 @@ viewPointOfViewForm model =
                                 []
 
                             SlopeCannotBeWorse ->
-                                [ span [ class "red" ] [ text "The current situation cannot not be worse!" ] ]
+                                [ span [ class "red" ] [ text "The current situation cannot not be worse than before!" ] ]
 
                             SlopeCannotBeBetter ->
-                                [ span [ class "red" ] [ text "The current situation cannot not be better!" ] ]
+                                [ span [ class "red" ] [ text "The current situation cannot not be better than before!" ] ]
 
                             ValidRerating ->
                                 [ input [ type_ "submit", value <| "I changed my mind, I see it like this now" ] [] ]
