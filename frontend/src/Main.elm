@@ -545,7 +545,7 @@ viewPointOfViewForm model =
     in
     case activeMetric of
         Nothing ->
-            div [ class "tc" ] [ text "The faciliator is choosing what to do next..." ]
+            div [ class "tc" ] [ text "The facilitator is choosing what to do next..." ]
 
         Just metric ->
             div []
