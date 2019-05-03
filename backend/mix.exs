@@ -25,7 +25,8 @@ defmodule Backend.MixProject do
     [
       {:plug_cowboy, "~> 2.0.1"},
       {:poison, "~> 4.0"},
-      {:dialyxir, "~> 0.5.1", only: [:dev], runtime: false}
+      {:dialyxir, "~> 0.5.1", only: [:dev], runtime: false},
+      {:distillery, "~> 2.0"}
     ]
   end
 end

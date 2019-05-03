@@ -1,6 +1,8 @@
 defmodule Backend.Router do
   {:ok, favicon} = File.read "../frontend/html/favicon.ico"
   @favicon favicon
+  {:ok, index_html} = File.read "../frontend/_build/index.html"
+  @index_html index_html
 
   use Plug.Router
 
@@ -9,8 +11,7 @@ defmodule Backend.Router do
   plug(:dispatch)
 
   get "/" do
-    {:ok, index_html} = File.read "../frontend/_build/index.html"
-    send_resp(conn, 200, index_html)
+    send_resp(conn, 200, @index_html)
   end
 
   get "/favicon.ico" do

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+pushd `dirname "$0"`/backend
+MIX_ENV=prod mix release
+zip -r ../release _build/prod/rel/backend/*

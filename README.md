@@ -51,3 +51,7 @@ then, `cd ./backend; mix deps.get`
 ### start backend
 
 `./start_backend`
+
+# release
+
+`./build_release` will create a `release.zip`
