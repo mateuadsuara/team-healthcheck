@@ -62,6 +62,8 @@ To run the docker container locally:
 To kill the running docker container:
 ``docker kill `docker ps | grep team-healthcheck | cut -f1 -d \t` ``
 
-# Demo
+# demo
 
-Can be used from here: https://team-healthcheck.herokuapp.com/
+Can be used from here:
+* For participants: https://team-healthcheck.herokuapp.com/
+* For the facilitator: https://team-healthcheck.herokuapp.com/?admin
