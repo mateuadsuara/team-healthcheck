@@ -6,7 +6,7 @@ data visualisation tool for assessing team health
 
 * install frontend dependencies
 * install backend dependencies
-* `./run`
+* `PORT=1234 ./run`
 
 ### install frontend dependencies
 
@@ -50,7 +50,7 @@ then, `cd ./backend; mix deps.get`
 
 ### start backend
 
-`./start_backend`
+`PORT=1234 ./start_backend`
 
 # release
 
