@@ -54,4 +54,10 @@ then, `cd ./backend; mix deps.get`
 
 # release
 
-`./build_release` will create a `release.zip`
+`./build_release` will build a docker image named `team-healthcheck` which exposes port 9292.
+
+To run the docker container locally:
+`docker run -p 9292:9292 team-healthcheck`
+
+To kill the running docker container:
+``docker kill `docker ps | grep team-healthcheck | cut -f1 -d \t` ``
