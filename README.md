@@ -54,10 +54,10 @@ then, `cd ./backend; mix deps.get`
 
 # release
 
-`./build_release` will build a docker image named `team-healthcheck` which exposes port 9292.
+`./build_release` will build a docker image named `team-healthcheck`.
 
 To run the docker container locally:
-`docker run -p 9292:9292 team-healthcheck`
+`docker run -p <local_port>:80 -e PORT=80 team-healthcheck` (replace `<local_port>` with the port you want to map to locally)
 
 To kill the running docker container:
 ``docker kill `docker ps | grep team-healthcheck | cut -f1 -d \t` ``

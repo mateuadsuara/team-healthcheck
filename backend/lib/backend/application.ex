@@ -7,7 +7,7 @@ defmodule Backend.Application do
   require Logger
 
   def start(_type, _args) do
-    port = 9292
+    port = get_port()
     default_options = [
       port: port,
       dispatch: [
@@ -51,5 +51,20 @@ defmodule Backend.Application do
     :ok = Logger.info("Server listening on port #{port}")
 
     Supervisor.start_link(children, opts)
+  end
+
+  defp get_port() do
+    default_port = 80
+    env_port = System.get_env("PORT")
+    if env_port == nil do
+      default_port
+    else
+      case env_port |> String.trim |> Integer.parse do
+        :error ->
+          default_port
+        {port, _} ->
+          port
+      end
+    end
   end
 end

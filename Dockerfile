@@ -12,9 +12,6 @@ ENV LC_ALL en_US.UTF-8
 # Install openssl for Elixir
 RUN apt-get install -y libssl1.0.0
 
-EXPOSE 9292/tcp
-EXPOSE 9292/udp
-
 COPY backend/_build/prod/rel/backend /backend
 
 CMD /backend/bin/backend foreground
