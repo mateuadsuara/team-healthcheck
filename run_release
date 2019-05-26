@@ -3,4 +3,4 @@
 if [[ -z "${PORT}" ]]; then
   PORT=1234
 fi
-docker run -p $PORT:$PORT -e PORT=$PORT team-healthcheck
+docker run $* -p $PORT:$PORT -e PORT=$PORT team-healthcheck

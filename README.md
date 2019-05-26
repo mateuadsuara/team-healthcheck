@@ -56,10 +56,16 @@ then, `cd ./backend; mix deps.get`
 
 `./build_release` will build a docker image named `team-healthcheck`.
 
-To run the docker container locally:
+To run the docker container locally and see the standard output:
+
 `PORT=1234 ./run_release`
 
-To kill the running docker container:
+To run the docker container locally in the background:
+
+`PORT=1234 ./run_release -d`
+
+To kill all the running docker containers:
+
 `./kill_release`
 
 # demo
