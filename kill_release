@@ -1,0 +1,3 @@
+#!/bin/bash
+
+docker kill `docker ps | grep team-healthcheck | cut -f1 -d \t`

@@ -1,5 +1,6 @@
 #!/bin/bash
 
 pushd `dirname "$0"`/backend
+../compile_frontend && \
 MIX_ENV=prod mix release && \
 docker build -t team-healthcheck ..
