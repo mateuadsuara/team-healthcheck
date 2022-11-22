@@ -67,9 +67,3 @@ To run the docker container locally in the background:
 To kill all the running docker containers:
 
 `./kill_release`
-
-# demo
-
-Can be used from here:
-* For participants: https://team-healthcheck.herokuapp.com/
-* For the facilitator: https://team-healthcheck.herokuapp.com/?admin
